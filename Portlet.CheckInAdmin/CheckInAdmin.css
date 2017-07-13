@@ -1,0 +1,84 @@
+﻿body .checkInAdmin {color:#000000;}
+.clear {clear:both;}
+
+/***************************************
+LAYOUT FOR DASHBOARD
+***************************************/
+div.dashboardDownload {margin:20px 0px;}
+div.dashboardDownload input[type="submit"] {margin:5px 0px 15px 15px;}
+
+div.chart {width:48%;float:left;margin-right:20px;}
+
+
+/***************************************
+END LAYOUT FOR DASHBOARD
+***************************************/
+
+
+.searchNameID {margin:20px 0px;}
+
+.nameSearchResults {margin:5px 0px;}
+.nameSearchResults tr th {vertical-align:middle;}
+
+.nameSearchResults tr th, .nameSearchResults tr td {text-align:center;border:1px solid #000000;}
+.nameSearchResults tr td.complete {background-color:#00CC00;}
+.nameSearchResults tr td.incomplete {background-color:#880000;}
+.nameSearchResults tr td.pending {background-color:#BB8800;}
+.nameSearchResults tr td.waived {background-color:#2FAFCC;}
+
+
+.nameSearchResults tr:hover td {background-color:#CCCCCC;}
+.nameSearchResults tr:hover td.complete {background-color:#00FF00;}
+.nameSearchResults tr:hover td.incomplete {background-color:#FF0000;}
+.nameSearchResults tr:hover td.pending {background-color:#FFAA00;}
+.nameSearchResults tr:hover td.waived {background-color:#77CFFF;}
+
+div.alert-container.feedback{
+    color:#990000;
+}
+
+input.activeStatus {
+    border:0px;
+    font-weight:bold;
+    background-color:#FFFFFF;
+}
+
+/***************************************
+LAYOUT FOR FACETED SEARCH
+***************************************/
+
+/* Office and task table */
+div.facet, table.tblFacetedSearch {clear:left;margin-bottom:20px;}
+span.facetLabel {float:left;width:100px;}
+table.facetOptions {float:left;}
+table.facetOptions tbody tr td {padding-right:25px;}
+
+.tblFacetedSearch th {text-align:center;}
+.tblFacetedSearch tr.radioRowOffice {background-color:#DDDDDD;}
+
+.tblFacetedSearch tr.radioRowTask {}
+.tblFacetedSearch td.radioRowTaskName {padding-left:25px;}
+
+.tblFacetedSearch tr td.radioRowOfficeStatus,
+.tblFacetedSearch tr td.radioRowTaskStatus {
+    width:85px;
+    text-align:center;
+}
+
+.tblFacetedSearch tr td.radioRowOfficeName,
+.tblFacetedSearch tr td.radioRowTaskName {
+    font-size:.9em;
+}
+/* End of office and task table */
+
+
+.resultCount {margin-top:30px;}
+.facetSearchResults tr th,
+.facetSearchResults tr td {text-align:center;vertical-align:top;}
+
+.facetSearchResults tr td {padding:3px;}
+.facetSearchResults tr td.basicInfo {text-align:left;}
+
+/***************************************
+END LAYOUT FOR FACETED SEARCH
+***************************************/

@@ -1,0 +1,19 @@
+# START - Check-In Admin
+dn: CN=[CUS] CheckInAdmin,OU=PortletTemplates,CN=Portal,O=Jenzabar,C=US
+changetype: add
+jenzabar-ICSNET-GUID:: epZuoJLv3E2NFKfrVlYZTg==
+objectClass: top
+objectClass: jenzabar-ICSNET-PortletTemplate
+displayName: Check-In Admin
+jenzabar-ICSNET-PortletPath: Portlet.CheckInAdmin,Portlet.CheckInAdmin.CI_Admin
+jenzabar-ICSNET-ApplicationPointer: CN=CUS,OU=PortalApplications,CN=Portal,O=Jenzabar,C=US
+instanceType: 4
+objectCategory: CN=Portlet-Template,CN=Schema,cn=configuration,cn=x
+
+dn: OU=Operations,CN=[CUS] CheckInAdmin,OU=PortletTemplates,CN=Portal,O=Jenzabar,C=US
+changetype: add
+objectClass: top
+objectClass: organizationalUnit
+instanceType: 4
+objectCategory: CN=Organizational-Unit,CN=Schema,CN=Configuration,CN=X
+# END - Check-In Admin
