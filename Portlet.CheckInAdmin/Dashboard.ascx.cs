@@ -4,8 +4,8 @@ using System.Data;
 using System.Data.Odbc;
 using System.Linq;
 using System.Web.UI;
-//using System.Web.UI.DataVisualization;
-//using System.Web.UI.DataVisualization.Charting;
+using System.Web.UI.DataVisualization;
+using System.Web.UI.DataVisualization.Charting;
 using System.Web.UI.WebControls;
 using Jenzabar.Common;
 using Jenzabar.Common.Globalization;
@@ -30,7 +30,7 @@ namespace Portlet.CheckInAdmin
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            LoadStudentProgress();
+            //LoadStudentProgress();
 
             LoadStudentActivity();
         }
@@ -67,8 +67,8 @@ namespace Portlet.CheckInAdmin
             dr["NotStarted"] = dtStudentProgress.AsEnumerable().Count(row => row.Field<int>("completed_task_count") == 0);
 
             dtStudentProgressCounts.Rows.Add(dr);
-            //chartStudentProgress.DataSource = dtStudentProgressCounts;
-            //chartStudentProgress.DataBind();
+            chartStudentProgress.DataSource = dtStudentProgressCounts;
+            chartStudentProgress.DataBind();
 
 //            DataTable dtStudentStarted = ciHelper.GetMergedView();
 //            DataTable dtStudentMissing1 = dtStudentStarted;
@@ -203,8 +203,8 @@ namespace Portlet.CheckInAdmin
             {
                 dtStudentActivity = jicsConn.ConnectToERP(sqlStudentActivity, ref exStudentActivity);
                 if (exStudentActivity != null) { throw exStudentActivity; }
-                //chartStudentActivity.DataSource = dtStudentActivity;
-                //chartStudentActivity.DataBind();
+                chartStudentActivity.DataSource = dtStudentActivity;
+                chartStudentActivity.DataBind();
             }
             catch (Exception ex)
             {
