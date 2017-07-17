@@ -109,7 +109,7 @@ namespace Portlet.CheckInAdmin {
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.DataVisualization.Charting.Chart chartStudentProgress;
+        // protected global::System.Web.UI.DataVisualization.Charting.Chart chartStudentProgress;
         
         /// <summary>
         /// panelStudentActivity control.
@@ -136,6 +136,6 @@ namespace Portlet.CheckInAdmin {
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.DataVisualization.Charting.Chart chartStudentActivity;
+        // protected global::System.Web.UI.DataVisualization.Charting.Chart chartStudentActivity;
     }
 }
