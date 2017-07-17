@@ -30,7 +30,7 @@ namespace Portlet.CheckInAdmin
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            //LoadStudentProgress();
+            LoadStudentProgress();
 
             LoadStudentActivity();
         }
