@@ -208,6 +208,11 @@ namespace Portlet.CheckInAdmin
                     END AS payment_options_form,
                     --CASE WHEN NVL(SSR.meal_plan_type,'') IN ('I','P') THEN 'Y' ELSE 'N' END AS room_and_board,
                     'N' AS room_and_board,
+                    CASE
+                        WHEN SAR.fin_clr = 'Y' THEN 'Y'
+                        WHEN SAR.fin_clr = 'N' THEN 'N'
+                        ELSE 'N'
+                    END AS financial_clearance,
                     --Financial Aid
                     CASE TRIM(NVL(EC.stat,'')) WHEN 'E' THEN 'N' WHEN 'C' THEN 'Y' ELSE 'W' END AS entrance_counseling, CASE TRIM(NVL(PLEC.stat,'')) WHEN 'E' THEN 'N' WHEN 'C' THEN 'Y' ELSE 'W' END AS perkins_loan_entrance,
                     CASE TRIM(NVL(MPN.stat,'')) WHEN 'E' THEN 'N' WHEN 'C' THEN 'Y' ELSE 'W' END AS Perkins_Loan_master, CASE TRIM(NVL(VW.stat,'')) WHEN 'E' THEN 'N' WHEN 'C' THEN 'Y' ELSE 'W' END AS verification_worksheet,
@@ -336,7 +341,7 @@ namespace Portlet.CheckInAdmin
                 WHERE
                     DIR.class_year IN ('FF','FR','FN','JR','PFF','PTR','SO','SR','UT')
                 GROUP BY
-                    id, firstname, lastname, email, phone, isfreshmantransfer, has_ubal, resident_commuter, earned_hours, payment_options_form, room_and_board, entrance_counseling, perkins_loan_entrance,
+                    id, firstname, lastname, email, phone, isfreshmantransfer, has_ubal, resident_commuter, earned_hours, payment_options_form, financial_clearnance, room_and_board, entrance_counseling, perkins_loan_entrance,
                     perkins_loan_master, verification_worksheet, stafford_loan, no_missing_documents, medical_forms, ferpa_release, verify_address, verify_majors, distribute_schedule,
                     confirm_graduate_status, has_id, community_code, housing_survey, parking_permit, is_athlete
                 ORDER BY
