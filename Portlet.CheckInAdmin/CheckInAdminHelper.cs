@@ -159,16 +159,19 @@ namespace Portlet.CheckInAdmin
 
         public DataTable GetTasks()
         {
-            OdbcConnectionClass3 spConn = helper.CONNECTION_SP;
-
+            string sqlTasks = String.Format(@"EXECUTE dbo.CUS_spCheckIn_Tasks");
             DataTable dtTasks = null;
             Exception exTasks = null;
-            string sqlTasks = "EXECUTE CUS_spCheckIn_Tasks";
+            OdbcConnectionClass3 spConn = helper.CONNECTION_SP;
 
             try
             {
                 dtTasks = spConn.ConnectToERP(sqlTasks, ref exTasks);
                 if (exTasks != null) { throw exTasks; }
+                if (dtTasks == null || dtTasks.Rows.Count == 0)
+                {
+                    throw new Exception("No tasks returned by the stored procedure.");
+                }
             }
             catch (Exception ex)
             {
@@ -178,7 +181,6 @@ namespace Portlet.CheckInAdmin
             {
                 if (spConn.IsNotClosed()) { spConn.Close(); }
             }
-
             return dtTasks;
         }
 
@@ -341,7 +343,7 @@ namespace Portlet.CheckInAdmin
                 WHERE
                     DIR.class_year IN ('FF','FR','FN','JR','PFF','PTR','SO','SR','UT')
                 GROUP BY
-                    id, firstname, lastname, email, phone, isfreshmantransfer, has_ubal, resident_commuter, earned_hours, payment_options_form, financial_clearnance, room_and_board, entrance_counseling, perkins_loan_entrance,
+                    id, firstname, lastname, email, phone, isfreshmantransfer, has_ubal, resident_commuter, earned_hours, payment_options_form, financial_clearance, room_and_board, entrance_counseling, perkins_loan_entrance,
                     perkins_loan_master, verification_worksheet, stafford_loan, no_missing_documents, medical_forms, ferpa_release, verify_address, verify_majors, distribute_schedule,
                     confirm_graduate_status, has_id, community_code, housing_survey, parking_permit, is_athlete
                 ORDER BY
