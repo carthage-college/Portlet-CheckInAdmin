@@ -19,7 +19,7 @@
             </Columns>
         </asp:GridView>
         <asp:Button ID="btnIncomplete" runat="server" Text="Students with tasks remaining" OnClick="btnIncomplete_Click" />
-        <asp:Button ID="btnUpdateProgress" runat="server" Text="Update Progress" OnClick="btnUpdateProgress_Click" />
+        <%--<asp:Button ID="btnUpdateProgress" runat="server" Text="Update Progress" OnClick="btnUpdateProgress_Click" />--%>
     </common:ContentBox>
 </asp:Panel>
 

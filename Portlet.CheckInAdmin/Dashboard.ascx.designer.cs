@@ -76,15 +76,6 @@ namespace Portlet.CheckInAdmin {
         protected global::System.Web.UI.WebControls.Button btnIncomplete;
         
         /// <summary>
-        /// btnUpdateProgress control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnUpdateProgress;
-        
-        /// <summary>
         /// panelStudentProgress control.
         /// </summary>
         /// <remarks>

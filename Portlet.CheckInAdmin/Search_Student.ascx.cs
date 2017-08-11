@@ -61,6 +61,7 @@ namespace Portlet.CheckInAdmin
 
                 try
                 {
+                    #region Original Search
                     DataTable dtResults = ciHelper.GetMergedView();
                     List<DataRow> drResults = new List<DataRow>() { };
                     if (dtResults != null && dtResults.Rows.Count > 0)
@@ -88,6 +89,7 @@ namespace Portlet.CheckInAdmin
                             gvSearchResults.DataBind();
                         }
                     }
+                    #endregion
                 }
                 catch (Exception ex)
                 {

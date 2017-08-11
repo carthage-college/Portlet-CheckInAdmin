@@ -66,6 +66,184 @@ namespace Portlet.CheckInAdmin
             dr["Started"] = dtStudentProgress.AsEnumerable().Count(row => row.Field<int>("completed_task_count") + row.Field<int>("waived_task_count") < totalTasks - 1 && row.Field<int>("completed_task_count") > 0);
             dr["NotStarted"] = dtStudentProgress.AsEnumerable().Count(row => row.Field<int>("completed_task_count") == 0);
 
+            #region Updated progress count
+            //            DataTable dtStudentProgressCounts = new DataTable();
+//            dtStudentProgressCounts.Columns.AddRange(new DataColumn[]{
+//                new DataColumn("Complete"),
+//                new DataColumn("Missing1"),
+//                new DataColumn("Started"),
+//                new DataColumn("NotStarted")
+//            });
+//            DataRow dr = dtStudentProgressCounts.NewRow();
+
+//            #region Count - Complete
+//            int complete = 0;
+//            OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
+//            try
+//            {
+//                DataTable dtComplete = null;
+//                Exception exComplete = null;
+//                string sqlComplete = String.Format(@"
+//                    SELECT
+//		                U.HostID, SP.UserID, SUM(CASE WHEN ISNULL(TaskStatus,'') IN ('Y','W') THEN 1 ELSE 0 END) AS CompletedTasks,
+//		                (SELECT COUNT(*) FROM CI_OfficeTask) - SUM(CASE WHEN ISNULL(TaskStatus,'') IN ('Y','W') THEN 1 ELSE 0 END) AS Remaining
+//	                FROM
+//		                FWK_User	U	LEFT JOIN	CI_StudentProgress	SP	ON	SP.UserID	=	U.ID
+//															                AND	SP.Yr		=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveYear')
+//															                AND	SP.Sess	=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveSession')
+//	                WHERE
+//		                SP.UserID	IS NOT NULL
+//	                AND
+//		                U.HostID	IS NOT NULL
+//	                GROUP BY
+//		                SP.UserID, U.HostID
+//	                HAVING
+//		                (SELECT COUNT(*) FROM CI_OfficeTask) - SUM(CASE WHEN ISNULL(TaskStatus,'') IN ('Y','W') THEN 1 ELSE 0 END) = 0"
+//                );
+//                dtComplete = jicsConn.ConnectToERP(sqlComplete, ref exComplete);
+//                if (exComplete != null) { throw exComplete; }
+//                if(dtComplete != null) { complete = dtComplete.Rows.Count; }
+//            }
+//            catch (Exception ex)
+//            {
+//                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error while calculating number of completed check-ins", ex));
+//            }
+//            finally
+//            {
+//                if (jicsConn.IsNotClosed()) { jicsConn.Close(); }
+//            }
+//            #endregion
+
+//            #region Count - Missing 1
+//            int missing1 = 0;
+//            try
+//            {
+//                DataTable dtMissing = null;
+//                Exception exMissing = null;
+//                string sqlMissing = String.Format(@"
+//                    SELECT
+//		                U.HostID, SP.UserID, SUM(CASE WHEN ISNULL(TaskStatus,'') IN ('Y','W') THEN 1 ELSE 0 END) AS CompletedTasks,
+//		                (SELECT COUNT(*) FROM CI_OfficeTask) - SUM(CASE WHEN ISNULL(TaskStatus,'') IN ('Y','W') THEN 1 ELSE 0 END) AS Remaining
+//	                FROM
+//		                FWK_User	U	LEFT JOIN	CI_StudentProgress	SP	ON	SP.UserID	=	U.ID
+//															                AND	SP.Yr		=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveYear')
+//															                AND	SP.Sess	=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveSession')
+//	                WHERE
+//		                SP.UserID	IS NOT NULL
+//	                AND
+//		                U.HostID	IS NOT NULL
+//	                GROUP BY
+//		                SP.UserID, U.HostID
+//	                HAVING
+//		                (SELECT COUNT(*) FROM CI_OfficeTask) - SUM(CASE WHEN ISNULL(TaskStatus,'') IN ('Y','W') THEN 1 ELSE 0 END) = 1"
+//                );
+//                dtMissing = jicsConn.ConnectToERP(sqlMissing, ref exMissing);
+//                if (exMissing != null) { throw exMissing; }
+//                if (dtMissing != null) { missing1 = dtMissing.Rows.Count; }
+//            }
+//            catch (Exception ex)
+//            {
+//                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error while calculating number of check-ins missing one task", ex));
+//            }
+//            finally
+//            {
+//                if (jicsConn.IsNotClosed()) { jicsConn.Close(); }
+//            }
+//            #endregion
+
+//            #region Count - Started
+//            int started = 0;
+//            try
+//            {
+//                DataTable dtStarted = null;
+//                Exception exStarted = null;
+//                string sqlStarted = String.Format(@"
+//                    SELECT
+//		                U.HostID, SP.UserID, SUM(CASE WHEN ISNULL(TaskStatus,'') IN ('Y','W') THEN 1 ELSE 0 END) AS CompletedTasks,
+//		                (SELECT COUNT(*) FROM CI_OfficeTask) - SUM(CASE WHEN ISNULL(TaskStatus,'') IN ('Y','W') THEN 1 ELSE 0 END) AS Remaining
+//	                FROM
+//		                FWK_User	U	LEFT JOIN	CI_StudentProgress	SP	ON	SP.UserID	=	U.ID
+//															                AND	SP.Yr		=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveYear')
+//															                AND	SP.Sess	=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveSession')
+//	                WHERE
+//		                SP.UserID	IS NOT NULL
+//	                AND
+//		                U.HostID	IS NOT NULL
+//	                GROUP BY
+//		                SP.UserID, U.HostID
+//	                HAVING
+//		                (SELECT COUNT(*) FROM CI_OfficeTask) - SUM(CASE WHEN ISNULL(TaskStatus,'') IN ('Y','W') THEN 1 ELSE 0 END) > 1
+//                    AND
+//                        SUM(CASE WHEN ISNULL(TaskStatus,'') IN ('Y','W') THEN 1 ELSE 0 END) > 1"
+//                );
+//                dtStarted = jicsConn.ConnectToERP(sqlStarted, ref exStarted);
+//                if (exStarted != null) { throw exStarted; }
+//                if (dtStarted != null) { started = dtStarted.Rows.Count; }
+//            }
+//            catch (Exception ex)
+//            {
+//                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error while calculating number of started check-ins", ex));
+//            }
+//            finally
+//            {
+//                if (jicsConn.IsNotClosed()) { jicsConn.Close(); }
+//            }
+//            #endregion
+
+//            #region Count - Not Started
+//            int notStarted = 0;
+//            try
+//            {
+//                OdbcConnectionClass3 cxConn = helper.CONNECTION_CX;
+
+//                DataTable dtNotStartedCX = null;
+//                Exception exNotStartedCX = null;
+//                string sqlNotStartedCX = String.Format(@"
+//                    SELECT id FROM stu_acad_rec WHERE yr = {0} AND sess = '{1}' AND subprog IN ('TRAD','TRAP') AND reg_stat <> 'C'"
+//                , helper.ACTIVE_YEAR, helper.ACTIVE_SESSION);
+                
+//                dtNotStartedCX = cxConn.ConnectToERP(sqlNotStartedCX, ref exNotStartedCX);
+
+//                if (exNotStartedCX != null) { throw exNotStartedCX; }
+//                if (dtNotStartedCX != null && dtNotStartedCX.Rows.Count > 0)
+//                {
+//                    string idList = string.Join(",", dtNotStartedCX.AsEnumerable().Select(row => row["id"].ToString()).ToArray());
+//                    DataTable dtNotStartedJICS = null;
+//                    Exception exNotStartedJICS = null;
+//                    string sqlNotStartedJICS = String.Format(@"
+//                        SELECT
+//	                        ID
+//                        FROM
+//	                        FWK_User	U
+//                        WHERE
+//	                        U.ID	NOT IN (
+//		                        SELECT UserID FROM CI_StudentProgress GROUP BY UserID
+//	                        )
+//                        AND
+//	                        U.HostID IN ({0})
+//                        ");
+//                    dtNotStartedJICS = jicsConn.ConnectToERP(sqlNotStartedJICS, ref exNotStartedJICS);
+
+//                    if (exNotStartedJICS != null) { throw exNotStartedJICS; }
+//                    if (dtNotStartedJICS != null) { notStarted = dtNotStartedJICS.Rows.Count; }
+//                }
+//            }
+//            catch (Exception ex)
+//            {
+//                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error while calculating number of unstarted check-ins", ex));
+//            }
+//            finally
+//            {
+//                if (jicsConn.IsNotClosed()) { jicsConn.Close(); }
+//            }
+//            #endregion
+            
+//            dr["Complete"] = complete;
+//            dr["Missing1"] = missing1;
+//            dr["Started"] = started;
+            //            dr["NotStarted"] = notStarted;
+            #endregion
+
             dtStudentProgressCounts.Rows.Add(dr);
             chartStudentProgress.DataSource = dtStudentProgressCounts;
             chartStudentProgress.DataBind();

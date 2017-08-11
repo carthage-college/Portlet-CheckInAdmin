@@ -53,40 +53,41 @@ namespace Portlet.CheckInAdmin
 
             if (foundStudent)
             {
-                Exception exProgress = null;
-                //DataRow drCX = helper.GetDataRow(studentID, out exProgress);
-                //DataTable dtCX = helper.GetCheckinView(ref exProgress, studentID);
-                //DataRow drCX = dtCX.Rows[0];
-                DataRow drCX = helper.GetCheckinRow(ref exProgress, studentID);
+                LoadStudentProgress(studentID);
+            }
+        }
 
-                try
-                {
-                    DataTable dtJICS = null;
-                    Exception exJICS = null;
-                    string sqlJICS = String.Format(@"EXECUTE dbo.CUS_spCheckIn_AdminGetTasks @intHostID = {0}", studentID);
-                    dtJICS = spConn.ConnectToERP(sqlJICS, ref exJICS);
-                    if (exJICS != null) { throw exJICS; }
+        protected void LoadStudentProgress(int studentID)
+        {
+            Exception exProgress = null;
+            DataRow drCX = helper.GetCheckinRow(ref exProgress, studentID);
 
-                    for (int ii = 0; ii < dtJICS.Rows.Count; ii++)
-                    {
-                        dtJICS.Rows[ii]["CX_Status"] = drCX[dtJICS.Rows[ii]["ViewColumn"].ToString()];
-                        //If the status from CX is Yes or the status from JICS is non-existent, use the CX value. Otherwise, use the JICS value.
-                        CheckInTaskStatus taskStatus = EnumUtil.GetEnumFromDescription<CheckInTaskStatus>(dtJICS.Rows[ii]["CX_Status"].ToString());
-                        dtJICS.Rows[ii]["TaskStatus"] = taskStatus == CheckInTaskStatus.Yes || String.IsNullOrEmpty(dtJICS.Rows[ii]["JICS_Status"].ToString()) ? dtJICS.Rows[ii]["CX_Status"].ToString() : dtJICS.Rows[ii]["JICS_Status"].ToString();
-                    }
+            try
+            {
+                DataTable dtJICS = null;
+                Exception exJICS = null;
+                string sqlJICS = String.Format(@"EXECUTE dbo.CUS_spCheckIn_AdminGetTasks @intHostID = {0}", studentID);
+                dtJICS = spConn.ConnectToERP(sqlJICS, ref exJICS);
+                if (exJICS != null) { throw exJICS; }
 
-                    dgTasks.DataSource = dtJICS;
-                    dgTasks.DataBind();
-                }
-                catch (Exception ex)
+                for (int ii = 0; ii < dtJICS.Rows.Count; ii++)
                 {
-                    //this.ParentPortlet.ShowFeedback(FeedbackType.Error, helper.FormatException("An error occurred while retrieving the student's record", ex));
-                    this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("An error occurred while retrieving the student's record", ex, null, true));//ex.ToString()); //
+                    dtJICS.Rows[ii]["CX_Status"] = drCX[dtJICS.Rows[ii]["ViewColumn"].ToString()];
+                    //If the status from CX is Yes or the status from JICS is non-existent, use the CX value. Otherwise, use the JICS value.
+                    CheckInTaskStatus taskStatus = EnumUtil.GetEnumFromDescription<CheckInTaskStatus>(dtJICS.Rows[ii]["CX_Status"].ToString());
+                    dtJICS.Rows[ii]["TaskStatus"] = taskStatus == CheckInTaskStatus.Yes || String.IsNullOrEmpty(dtJICS.Rows[ii]["JICS_Status"].ToString()) ? dtJICS.Rows[ii]["CX_Status"].ToString() : dtJICS.Rows[ii]["JICS_Status"].ToString();
                 }
-                finally
-                {
-                    if (cxConn.IsNotClosed()) { cxConn.Close(); }
-                }
+
+                dgTasks.DataSource = dtJICS;
+                dgTasks.DataBind();
+            }
+            catch (Exception ex)
+            {
+                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("An error occurred while retrieving the student's record", ex, null, true));
+            }
+            finally
+            {
+                if (cxConn.IsNotClosed()) { cxConn.Close(); }
             }
         }
 
@@ -113,12 +114,52 @@ namespace Portlet.CheckInAdmin
                 ((Button)e.Item.FindControl(buttonID)).CommandArgument = null;
                 ((Button)e.Item.FindControl(buttonID)).Enabled = false;
                 ((Button)e.Item.FindControl(buttonID)).CssClass += " activeStatus";
+
+                if (row["TaskStatus"].ToString() == CheckInTaskStatus.Yes.ToDescriptionString())
+                {
+                    ((Button)e.Item.FindControl("btnStatusN")).Visible =
+                    ((Button)e.Item.FindControl("btnStatusP")).Visible =
+                    ((Button)e.Item.FindControl("btnStatusW")).Visible = false;
+                }
             }
         }
 
         public void handleStatusChange(string taskID, string status)
         {
-            this.ParentPortlet.ShowFeedback(FeedbackType.Message, String.Format("UPDATE CI_OfficeTask SET TaskStatus = '{0}' WHERE TaskID = '{1}'", status, taskID));
+            //this.ParentPortlet.ShowFeedback(FeedbackType.Message, String.Format("UPDATE CI_OfficeTask SET TaskStatus = '{0}' WHERE TaskID = '{1}'", status, taskID));
+            string feedbackUpdate = String.Format(@"EXECUTE CUS_spCheckIn_UpdateTask @uuidTaskID = '{0}', @strTaskStatus = '{1}', @uuidStatusUserID = '{2}', @intHostID = {3}",
+                taskID, status, PortalUser.Current.Guid.ToString(),
+                this.ParentPortlet.PortletViewState[ciHelper.VIEWSTATE_SEARCH_STUDENTID].ToString());
+            this.ParentPortlet.ShowFeedback(FeedbackType.Message, feedbackUpdate);
+
+            int studentID = int.Parse(this.ParentPortlet.PortletViewState[ciHelper.VIEWSTATE_SEARCH_STUDENTID].ToString());
+            try
+            {
+                OdbcConnectionClass3 spConn = helper.CONNECTION_SP;
+                Exception exUpdate = null;
+                string sqlUpdate = String.Format("EXECUTE CUS_spCheckIn_UpdateTask @uuidTaskID = ?, @strTaskStatus = ?, @uuidStatusUserID = ?, @intHostID = {0}",
+                    studentID);
+                List<OdbcParameter> paramUpdate = new List<OdbcParameter>()
+                {
+                    new OdbcParameter("taskID", taskID)
+                    , new OdbcParameter("status", status)
+                    , new OdbcParameter("statusUserID", PortalUser.Current.Guid.ToString())
+                };
+
+                spConn.ConnectToERP(sqlUpdate, ref exUpdate, paramUpdate);
+                if (exUpdate != null) { throw exUpdate; }
+                
+                //If the stored procedure executed successfully, reload the table to reflect the updated information
+                LoadStudentProgress(studentID);
+            }
+            catch (Exception ex)
+            {
+                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("An exception occurred while updating the status of this task", ex, null, true));
+            }
+            finally
+            {
+                if (spConn.IsNotClosed()) { spConn.Close(); }
+            }
         }
 
         protected void btnStatusY_Click(object sender, EventArgs e)

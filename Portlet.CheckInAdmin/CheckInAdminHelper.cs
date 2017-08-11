@@ -265,7 +265,7 @@ namespace Portlet.CheckInAdmin
                                                                             AND    UBAL.hld        =    'UBAL'
                                                                             AND    TODAY        BETWEEN    UBAL.beg_date AND NVL(UBAL.end_date, TODAY)
                                         LEFT JOIN    profile_rec        PROF    ON    DIR.id            =    PROF.id
-                                        LEFT JOIN    stu_acad_rec    SAR        ON    DIR.id            =    SAR.id
+                                       LEFT JOIN    stu_acad_rec    SAR        ON    DIR.id            =    SAR.id
                                                                             AND    SAR.yr            =    {0}
                                                                             AND    SAR.sess        =    '{1}'
                                         LEFT JOIN    stu_stat_rec    STAT    ON    DIR.id            =    STAT.id
@@ -275,23 +275,23 @@ namespace Portlet.CheckInAdmin
                                                                             AND    SSR.sess        =    '{1}'
                                         --Financial Aid - Entrance counseling
                                         LEFT JOIN    (
-                                                        SELECT    id, stat    FROM    ctc_rec    WHERE    tick    =    (SELECT MAX(tick) FROM ctc_rec WHERE tick LIKE 'FY%')    AND resrc    =    'FALNEC'
+                                                        SELECT    id, stat    FROM    ctc_rec    WHERE    tick    =    (SELECT MAX(tick) FROM ctc_rec WHERE tick LIKE 'FY%') AND stat in ('E','C')    AND resrc    =    'FALNEC'
                                                     )                EC        ON    DIR.id            =    EC.id
                                         --Financial Aid - Perkins Loan entrance counseling
                                         LEFT JOIN    (
-                                                        SELECT    id, stat    FROM    ctc_rec    WHERE    tick    =    (SELECT MAX(tick) FROM ctc_rec WHERE tick LIKE 'FY%')    AND resrc    =    'FAPKEI'
+                                                        SELECT    id, stat    FROM    ctc_rec    WHERE    tick    =    (SELECT MAX(tick) FROM ctc_rec WHERE tick LIKE 'FY%') AND stat in ('E','C')    AND resrc    =    'FAPKEI'
                                                     )                PLEC    ON    DIR.id            =    PLEC.id
                                         --Financial Aid - Perkins Loan master promissory note
                                         LEFT JOIN    (
-                                                        SELECT    id, stat    FROM    ctc_rec    WHERE    tick    =    (SELECT MAX(tick) FROM ctc_rec WHERE tick LIKE 'FY%')    AND resrc    =    'FAPKMPN'
+                                                        SELECT    id, stat    FROM    ctc_rec    WHERE    tick    =    (SELECT MAX(tick) FROM ctc_rec WHERE tick LIKE 'FY%') AND stat in ('E','C')    AND resrc    =    'FAPKMPN'
                                                     )                MPN        ON    DIR.id            =    MPN.id
                                         --Financial Aid - Verification worksheet
                                         LEFT JOIN    (
-                                                        SELECT    id, stat    FROM    ctc_rec    WHERE    tick    =    (SELECT MAX(tick) FROM ctc_rec WHERE tick LIKE 'FY%')    AND resrc    IN    ('INDVERIF','FAVRWK')
+                                                        SELECT    id, stat    FROM    ctc_rec    WHERE    tick    =    (SELECT MAX(tick) FROM ctc_rec WHERE tick LIKE 'FY%') AND stat in ('E','C')    AND resrc    IN    ('INDVERIF','FAVRWK')
                                                     )                VW        ON    DIR.id            =    VW.id
                                         --Financial Aid - Stafford Loan
                                         LEFT JOIN    (
-                                                        SELECT    id, stat    FROM    ctc_rec    WHERE    tick    =    (SELECT MAX(tick) FROM ctc_rec WHERE tick LIKE 'FY%')    AND resrc    =    'FADLMPN'
+                                                        SELECT    id, stat    FROM    ctc_rec    WHERE    tick    =    (SELECT MAX(tick) FROM ctc_rec WHERE tick LIKE 'FY%') AND stat in ('E','C')    AND resrc    =    'FADLMPN'
                                                     )                SL        ON    DIR.id            =    SL.id
                                         --Financial Aid - Missing Documents
                                         LEFT JOIN    (
@@ -342,6 +342,8 @@ namespace Portlet.CheckInAdmin
                                                     )                PRK        ON    DIR.id            =    PRK.carthage_id
                 WHERE
                     DIR.class_year IN ('FF','FR','FN','JR','PFF','PTR','SO','SR','UT')
+                AND
+                    NVL(SAR.subprog,'') IN  ('TRAD','TRAP')
                 GROUP BY
                     id, firstname, lastname, email, phone, isfreshmantransfer, has_ubal, resident_commuter, earned_hours, payment_options_form, financial_clearance, room_and_board, entrance_counseling, perkins_loan_entrance,
                     perkins_loan_master, verification_worksheet, stafford_loan, no_missing_documents, medical_forms, ferpa_release, verify_address, verify_majors, distribute_schedule,
