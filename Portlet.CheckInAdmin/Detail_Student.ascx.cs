@@ -53,6 +53,31 @@ namespace Portlet.CheckInAdmin
 
             if (foundStudent)
             {
+                OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
+                DataTable dtStudent = null;
+                Exception exStudent = null;
+                string sqlStudent = String.Format("SELECT FirstName, LastName FROM FWK_User WHERE CAST(HostID AS INT) = {0}", studentID);
+
+                try
+                {
+                    dtStudent = jicsConn.ConnectToERP(sqlStudent, ref exStudent);
+                    if (exStudent != null) { throw exStudent; }
+                    if (dtStudent != null && dtStudent.Rows.Count > 0)
+                    {
+                        //this.ltlStudentName.Text = String.Format("{0} {1}", dtStudent.Rows[0]["FirstName"].ToString(), dtStudent.Rows[0]["LastName"].ToString());
+                        this.shDetail.Text = String.Format("Student Detail View for {0} {1} (ID: {2})",
+                            dtStudent.Rows[0]["FirstName"].ToString(), dtStudent.Rows[0]["LastName"].ToString(), studentID);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("An error occurred while retrieving student name", ex));
+                }
+                finally
+                {
+                    if (jicsConn.IsNotClosed()) { jicsConn.Close(); }
+                }
+
                 LoadStudentProgress(studentID);
             }
         }
@@ -89,12 +114,6 @@ namespace Portlet.CheckInAdmin
             {
                 if (cxConn.IsNotClosed()) { cxConn.Close(); }
             }
-        }
-
-        protected void btnBackToSearch_Click(object sender, EventArgs e)
-        {
-            this.ParentPortlet.PortletViewState[ciHelper.VIEWSTATE_SEARCH_STUDENTID] = null;
-            this.ParentPortlet.PreviousScreen(ciHelper.VIEW_SEARCH);
         }
 
         protected void dgTasks_ItemDataBound(object sender, DataGridItemEventArgs e)
@@ -162,6 +181,14 @@ namespace Portlet.CheckInAdmin
             }
         }
 
+        #region Event Handlers
+
+        protected void btnBackToSearch_Click(object sender, EventArgs e)
+        {
+            this.ParentPortlet.PortletViewState[ciHelper.VIEWSTATE_SEARCH_STUDENTID] = null;
+            this.ParentPortlet.PreviousScreen(ciHelper.VIEW_SEARCH);
+        }
+
         protected void btnStatusY_Click(object sender, EventArgs e)
         {
             handleStatusChange((sender as Button).CommandArgument, CheckInTaskStatus.Yes.ToDescriptionString());
@@ -181,5 +208,7 @@ namespace Portlet.CheckInAdmin
         {
             handleStatusChange((sender as Button).CommandArgument, CheckInTaskStatus.Waived.ToDescriptionString());
         }
+
+        #endregion
     }
 }

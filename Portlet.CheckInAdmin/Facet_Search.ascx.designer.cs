@@ -13,13 +13,13 @@ namespace Portlet.CheckInAdmin {
     public partial class Facet_Search {
         
         /// <summary>
-        /// btnIndividualLookup control.
+        /// aNameSearch control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnIndividualLookup;
+        protected global::System.Web.UI.WebControls.LinkButton aNameSearch;
         
         /// <summary>
         /// panelFacetedSearch control.
@@ -40,13 +40,13 @@ namespace Portlet.CheckInAdmin {
         protected global::System.Web.UI.WebControls.Label lblStanding;
         
         /// <summary>
-        /// cblStanding control.
+        /// ddlStanding control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.CheckBoxList cblStanding;
+        protected global::System.Web.UI.WebControls.DropDownList ddlStanding;
         
         /// <summary>
         /// lblAthlete control.
@@ -58,13 +58,13 @@ namespace Portlet.CheckInAdmin {
         protected global::System.Web.UI.WebControls.Label lblAthlete;
         
         /// <summary>
-        /// cblAthlete control.
+        /// lbAthletics control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.CheckBoxList cblAthlete;
+        protected global::System.Web.UI.WebControls.ListBox lbAthletics;
         
         /// <summary>
         /// lblResidency control.

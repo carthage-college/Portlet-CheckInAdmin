@@ -184,6 +184,41 @@ namespace Portlet.CheckInAdmin
             return dtTasks;
         }
 
+        public DataTable GetOfficeAndTask()
+        {
+            OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
+            DataTable dtOffice = null;
+            Exception exOffice = null;
+            string sqlOffice = @"
+	            SELECT
+		            O.OfficeName, O.OfficeID, OT.TaskName, OT.TaskID, OT.ViewColumn
+	            FROM
+		            CI_OfficeTaskSession	OTS	INNER JOIN	CI_OfficeTask	OT	ON	OTS.OfficeTaskID	=	OT.TaskID
+									            INNER JOIN	CI_Office		O	ON	OT.OfficeID			=	O.OfficeID
+	            WHERE
+		            OTS.ActiveYear		=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveYear')
+	            AND
+		            OTS.ActiveSession	=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveSession')
+	            ORDER BY
+		            O.Sequence, OT.Sequence
+            ";
+
+            try
+            {
+                dtOffice = jicsConn.ConnectToERP(sqlOffice, ref exOffice);
+                if (exOffice != null) { throw exOffice; }
+            }
+            catch (Exception ex)
+            {
+                FormatException("An exception occurred while loading office/task table", ex);
+            }
+            finally
+            {
+                if (jicsConn.IsNotClosed()) { jicsConn.Close(); }
+            }
+            return dtOffice;
+        }
+
         public List<string> GetTaskViewColumns()
         {
             DataTable dtTasks = GetTasks();
@@ -519,6 +554,44 @@ namespace Portlet.CheckInAdmin
             return dtAllStudents;
         }
 
+        #region Faceted Search helpers
+
+        public DataTable GetAthletics()
+        {
+            OdbcConnectionClass3 cxConn = helper.CONNECTION_CX;
+            DataTable dtAthletics = null;
+            Exception exAthletics = null;
+
+            string sqlAthletics = @"
+                SELECT
+                    TRIM(invl) AS involve_code, TRIM(txt) AS involve_text
+                FROM
+                    invl_table
+                WHERE
+                    sanc_sport = 'Y'
+                AND
+                    TODAY BETWEEN active_date AND NVL(inactive_date, TODAY)
+                ORDER BY
+                    txt";
+
+            try
+            {
+                dtAthletics = cxConn.ConnectToERP(sqlAthletics, ref exAthletics);
+                if (exAthletics != null) { throw exAthletics; }
+            }
+            catch (Exception ex)
+            {
+                FormatException("Could not retrieve athletic organizations", ex, null, true);
+            }
+            finally
+            {
+                if (cxConn.IsNotClosed()) { cxConn.Close(); }
+            }
+            return dtAthletics;
+        }
+
+        #endregion
+
         public void UpdatePortalFromCX()
         {
             DataTable dtCX = GetCXView();
@@ -544,7 +617,7 @@ namespace Portlet.CheckInAdmin
 
                 debug = String.Format("{0}<p>Waive {1} task(s) for {2}</p>", debug, cxStudentsWaiveTask.Count.ToString(), task);
             }
-            helper.EmailAdmin(debug);
+            //helper.EmailAdmin(debug);
         }
     }
 

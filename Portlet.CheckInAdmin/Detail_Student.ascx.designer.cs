@@ -19,7 +19,16 @@ namespace Portlet.CheckInAdmin {
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::Jenzabar.Common.Web.UI.Controls.SubHeader shDetail;
+        protected global::Jenzabar.Common.Web.UI.Controls.Subheader shDetail;
+        
+        /// <summary>
+        /// ltlStudentName control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Literal ltlStudentName;
         
         /// <summary>
         /// ltlStudentID control.

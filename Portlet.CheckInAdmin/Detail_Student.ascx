@@ -1,8 +1,51 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeBehind="Detail_Student.ascx.cs" Inherits="Portlet.CheckInAdmin.Detail_Student" %>
 <%@ Register Assembly="Jenzabar.Common" Namespace="Jenzabar.Common.Web.UI.Controls" TagPrefix="common" %>
 
+<script type="text/javascript">
+    $(function () {
+        //Get all rows of the table
+        var $tableRows = $('.taskTable tbody tr').not(':first');
+        var offices = [];
+        //Loop through rows to get the names of every office
+        $tableRows.each(function (index) {
+            offices.push($(this).find('td:first').text());
+        });
+        //$.unique() removes duplicate entries from the array
+        $.each($.unique(offices), function (officeIndex, currentOffice) {
+            var officeComplete = true;
+            //Loop through every row of the table
+            $tableRows.each(function (rowIndex) {
+                //If the row is associated with the current office...
+                if ($(this).find('td:first').text() == currentOffice) {
+                    //Get the current task status
+                    var taskStatus = $(this).find('td:eq(2) input[disabled="disabled"]').val();
+                    //If the task is not completed, the entire office is flagged as incomplete
+                    if (taskStatus == 'No' || taskStatus == 'Pending') {
+                        officeComplete = false;
+                    }
+                }
+            });
+
+            //Determine css class to use
+            var rowClass = officeComplete ? 'complete' : 'incomplete';
+            $tableRows.each(function (rowIndex) {
+                if ($(this).find('td:first').text() == currentOffice) {
+                    //Attach class to cell if the office matches
+                    $(this).find('td:first').addClass(rowClass);
+                }
+            });
+        });
+    });
+</script>
+
 <common:SubHeader ID="shDetail" runat="server" Text="Student Detail View" />
-Student ID: <asp:Literal ID="ltlStudentID" runat="server" />
+<!---
+<h2>Student Detail View</h2>
+<div class="pSection">
+    <p><asp:Literal ID="ltlStudentName" runat="server" /></p>
+    <p>Student ID: <asp:Literal ID="ltlStudentID" runat="server" /></p>
+</div>
+--->
 
 <div class="pSection">
     <asp:Button ID="btnBackToSearch1" runat="server" Text="Return to Search" UseSubmitBehavior="false" OnClick="btnBackToSearch_Click" />

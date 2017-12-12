@@ -21,17 +21,17 @@ END LAYOUT FOR DASHBOARD
 .nameSearchResults tr th {vertical-align:middle;}
 
 .nameSearchResults tr th, .nameSearchResults tr td {text-align:center;border:1px solid #000000;}
-.nameSearchResults tr td.complete {background-color:#00CC00;}
-.nameSearchResults tr td.incomplete {background-color:#880000;}
-.nameSearchResults tr td.pending {background-color:#BB8800;}
-.nameSearchResults tr td.waived {background-color:#2FAFCC;}
+.nameSearchResults tr td.complete, .taskTable tbody tr td.complete, .facetSearchResults tr td.complete {background-color:#00CC00;}
+.nameSearchResults tr td.incomplete, .taskTable tbody tr td.incomplete, .facetSearchResults tr td.incomplete {background-color:#880000;}
+.nameSearchResults tr td.pending, .taskTable tbody tr td.pending, .facetSearchResults tr td.pending {background-color:#BB8800;}
+.nameSearchResults tr td.waived, .taskTable tbody tr td.waived, .facetSearchResults tr td.waived {background-color:#2FAFCC;}
 
 
-.nameSearchResults tr:hover td {background-color:#CCCCCC;}
-.nameSearchResults tr:hover td.complete {background-color:#00FF00;}
-.nameSearchResults tr:hover td.incomplete {background-color:#FF0000;}
-.nameSearchResults tr:hover td.pending {background-color:#FFAA00;}
-.nameSearchResults tr:hover td.waived {background-color:#77CFFF;}
+.nameSearchResults tr:hover td, .facetSearchResults tr:hover td {background-color:#CCCCCC;}
+.nameSearchResults tr:hover td.complete, .facetSearchResults tr:hover td.complete {background-color:#00FF00;}
+.nameSearchResults tr:hover td.incomplete, .facetSearchResults tr:hover td.incomplete {background-color:#FF0000;}
+.nameSearchResults tr:hover td.pending, .facetSearchResults tr:hover td.pending {background-color:#FFAA00;}
+.nameSearchResults tr:hover td.waived, .facetSearchResults tr:hover td.waived {background-color:#77CFFF;}
 
 div.alert-container.feedback{
     color:#990000;
@@ -46,6 +46,18 @@ input.activeStatus {
 /***************************************
 LAYOUT FOR FACETED SEARCH
 ***************************************/
+
+fieldset.fieldsetFacetedSearch {
+    border: 1px solid #000000;
+    width: 35%;
+    padding: 10px 0px 0px 10px;
+    margin: 15px 0px;
+}
+fieldset.fieldsetFacetedSearch legend {
+    border: 1px solid #000000;
+    padding: 3px 5px;
+    font-weight: bold;
+}
 
 /* Office and task table */
 div.facet, table.tblFacetedSearch {clear:left;margin-bottom:20px;}

@@ -37,42 +37,86 @@ namespace Portlet.CheckInAdmin
 
             if (IsFirstLoad)
             {
-                DataTable dtOffices = null;
-                Exception exOffices = null;
-                string sqlOffices = "EXECUTE CUS_spCheckIn_Offices";
+                #region Original Table Load
 
+                //DataTable dtOffices = null;
+                //Exception exOffices = null;
+                //string sqlOffices = "EXECUTE CUS_spCheckIn_Offices";
+
+                //try
+                //{
+                //    dtOffices = spConn.ConnectToERP(sqlOffices, ref exOffices);
+                //    if (exOffices != null) { throw exOffices; }
+                //    if (dtOffices != null && dtOffices.Rows.Count > 0)
+                //    {
+                //        foreach (DataRow drOffice in dtOffices.Rows)
+                //        {
+                //            string officeName = drOffice["OfficeName"].ToString();
+                //            tblOffices.Rows.Add(OfficeRow(officeName, drOffice["OfficeID"].ToString()));
+
+                //            DataTable dtTasks = ciHelper.GetTasks();
+                //            List<string> taskNames = dtTasks.AsEnumerable().Where(tn => tn.Field<string>("OfficeName") == officeName).Select(tn => tn.Field<string>("ViewColumn")).ToList();
+                //            Dictionary<string, string> tasks = dtTasks.AsEnumerable()
+                //                .Where(task => task.Field<string>("OfficeName") == officeName)
+                //                .ToDictionary(task => task.Field<string>("TaskName"), task => task.Field<string>("ViewColumn"));
+
+                //            foreach(KeyValuePair<string, string> task in tasks)
+                //            {
+                //                tblOffices.Rows.Add(TaskRow(task.Key, drOffice["OfficeID"].ToString(), task.Value));
+                //            }
+                //        }
+                //    }
+                //}
+                //catch (Exception ex)
+                //{
+                //    this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("An error occurred while retrieving office information", ex));
+                //}
+                //finally
+                //{
+                //    if (spConn.IsNotClosed()) { spConn.Close(); }
+                //}
+
+                #endregion
+
+                #region New/Updated Table Load
+
+                DataTable dtOffice = null;
                 try
                 {
-                    dtOffices = spConn.ConnectToERP(sqlOffices, ref exOffices);
-                    if (exOffices != null) { throw exOffices; }
-                    if (dtOffices != null && dtOffices.Rows.Count > 0)
+                    dtOffice = ciHelper.GetOfficeAndTask();
+
+                    string currentOffice = "";
+                    foreach (DataRow drOffice in dtOffice.Rows)
                     {
-                        foreach (DataRow drOffice in dtOffices.Rows)
+                        string officeName = drOffice["OfficeName"].ToString(),
+                            officeID = drOffice["OfficeID"].ToString();
+
+                        //If the office has changed from the last iteration of the loop, create a new header row
+                        if (currentOffice != officeName)
                         {
-                            string officeName = drOffice["OfficeName"].ToString();
-                            tblOffices.Rows.Add(OfficeRow(officeName, drOffice["OfficeID"].ToString()));
-
-                            DataTable dtTasks = ciHelper.GetTasks();
-                            List<string> taskNames = dtTasks.AsEnumerable().Where(tn => tn.Field<string>("OfficeName") == officeName).Select(tn => tn.Field<string>("ViewColumn")).ToList();
-                            Dictionary<string, string> tasks = dtTasks.AsEnumerable()
-                                .Where(task => task.Field<string>("OfficeName") == officeName)
-                                .ToDictionary(task => task.Field<string>("TaskName"), task => task.Field<string>("ViewColumn"));
-
-                            foreach(KeyValuePair<string, string> task in tasks)
-                            {
-                                tblOffices.Rows.Add(TaskRow(task.Key, drOffice["OfficeID"].ToString(), task.Value));
-                            }
+                            currentOffice = officeName;
+                            tblOffices.Rows.Add(OfficeRow(currentOffice, officeID));
                         }
+
+                        tblOffices.Rows.Add(TaskRow(drOffice["TaskName"].ToString(), officeID, drOffice["ViewColumn"].ToString()));
                     }
                 }
                 catch (Exception ex)
                 {
-                    this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("An error occurred while retrieving office information", ex));
+                    this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("An exception occurred while loading office/task table", ex));
                 }
-                finally
-                {
-                    if (spConn.IsNotClosed()) { spConn.Close(); }
-                }
+
+                #endregion
+
+                #region Load Dropdowns
+
+                DataTable dtAthletics = ciHelper.GetAthletics();
+                this.lbAthletics.DataSource = dtAthletics;
+                this.lbAthletics.DataTextField = "involve_text";
+                this.lbAthletics.DataValueField = "involve_code";
+                this.lbAthletics.DataBind();
+
+                #endregion
             }
 
             #endregion
@@ -92,6 +136,8 @@ namespace Portlet.CheckInAdmin
             if (drList.Count == 0) { dt.Rows.Clear(); }
             else { dt = drList.CopyToDataTable(); }
         }
+
+        #region Row and Control creation
 
         private TableRow OfficeRow(string officeName, string officeID)
         {
@@ -171,6 +217,8 @@ namespace Portlet.CheckInAdmin
             return rb;
         }
 
+        #endregion
+
         private List<RadioButton> GetRadioGroup(Control ctrl, string groupName, List<RadioButton> results = null)
         {
             foreach (Control child in ctrl.Controls)
@@ -214,6 +262,8 @@ namespace Portlet.CheckInAdmin
             return val;
         }
 
+        #region Event Handlers
+
         protected void btnExportExcel_Click(object sender, EventArgs e)
         {
             Response.Clear();
@@ -253,12 +303,249 @@ namespace Portlet.CheckInAdmin
             }
         }
 
-        protected void btnIndividualLookup_Click(object sender, EventArgs e)
+        protected void aNameSearch_Click(object sender, EventArgs e)
         {
             this.ParentPortlet.NextScreen("Search_Student");
         }
 
         protected void btnSearch_Click(object sender, EventArgs e)
+        {
+            OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
+            DataTable dtResults = null;
+            Exception exResults = null;
+
+            #region Dynamically build search SQL
+
+            //Get the offices and task which are active for the current year/session
+            DataTable dtOfficeTask = ciHelper.GetOfficeAndTask();
+            string sqlSelect = "", sqlFrom = "", sqlWhere = "";
+            
+            //Loop through each task
+            foreach (DataRow dr in dtOfficeTask.Rows)
+            {
+                string viewColumn = dr["ViewColumn"].ToString();
+                string tableAlias = viewColumn.Replace("_", "");
+
+                //Build SELECT portion of SQL statment
+                sqlSelect = String.Format("{0}, {1}.TaskStatus AS '{2}'", sqlSelect, tableAlias, viewColumn);
+                
+                //Build JOINS for SQL statement
+                sqlFrom = String.Format(@"{0}
+                            LEFT JOIN   CI_StudentProgress  {1} ON  U.ID        =   {1}.UserID
+                                                                AND {1}.TaskID  =   (SELECT TaskID FROM CI_OfficeTask WHERE ViewColumn = '{2}')
+                                                                AND {1}.Yr      =   {3}
+                                                                AND {1}.Sess    =   '{4}'
+                ", sqlFrom, tableAlias, viewColumn, helper.ACTIVE_YEAR, helper.ACTIVE_SESSION);
+
+                //Get the collection of radio buttons which correspond to the current task
+                List<RadioButton> radioForTask = GetRadioGroup(tblOffices, String.Format("Task{0}", viewColumn));
+                
+                //Was a radio button other than "Any" selected for this task?
+                RadioButton selectedRadio = radioForTask.FirstOrDefault(rb => rb.Checked == true && !rb.ID.EndsWith("*"));
+                
+                if (radioForTask.Contains(selectedRadio))
+                {
+                    //Because some columns address multiple statuses (Y/W, N/P, etc), turn each status into an item in a list and format it for the SQL statement
+                    string status = "";
+                    List<string> statusList = selectedRadio.ID.Split('_').Last().Select(chr => chr.ToString()).ToList();
+                    foreach (string stat in statusList)
+                    {
+                        status = String.Format("{0}{1}'{2}'", status, String.IsNullOrWhiteSpace(status) ? "" : ",", stat);
+                    }
+                    
+                    sqlWhere = String.Format("{0} AND {1}.TaskStatus IN ({2})", sqlWhere, tableAlias, status);
+                }
+            }
+
+            #endregion
+
+            string sqlResults = String.Format(@"
+                SELECT
+                    CAST(CAST(U.HostID AS INT) AS VARCHAR(10)) AS HostID, U.LastName, U.FirstName, U.Email, '' AS standing, '' AS athlete, '' AS residency {0}
+                FROM
+                    CI_StudentMetaData  SMD INNER JOIN  FWK_User    U   ON  SMD.UserID  =   U.ID
+                                            {1}
+                WHERE
+                    SMD.ActiveYear      =   (SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveYear')
+                AND
+                    SMD.ActiveSession   =   (SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveSession')
+                {2}
+                ORDER BY
+                    U.LastName, U.FirstName, U.Email
+            ", sqlSelect, sqlFrom, sqlWhere);
+
+            try
+            {
+                dtResults = jicsConn.ConnectToERP(sqlResults, ref exResults);
+                if (exResults != null) { throw exResults; }
+
+                ////////////////////////////////////////////////////////////////////
+                #region Faceted Search - Standing
+
+                if (!String.IsNullOrWhiteSpace(this.ddlStanding.SelectedValue))
+                {
+                    OdbcConnectionClass3 cxConn = helper.CONNECTION_CX_LIVE;
+                    DataTable dtStanding = null;
+                    Exception exStanding = null;
+                    string sqlStanding = String.Format(@"
+                        SELECT
+	                        TRIM(host_id) AS id
+                        FROM
+	                        jenzcst_rec
+                        WHERE
+	                        status_code	{0} IN ('PFF','PTR')
+                        GROUP BY
+                            id
+                    ", (this.ddlStanding.SelectedValue == "N" ? "NOT" : "") );
+                    
+                    try
+                    {
+                        dtStanding = cxConn.ConnectToERP(sqlStanding, ref exStanding);
+                        if (exStanding != null) { throw exStanding; }
+                        if (dtStanding != null && dtStanding.Rows.Count > 0)
+                        {
+                            List<string> standingIDs = dtStanding.AsEnumerable().Select(standing => standing.Field<string>("id")).ToList();
+                            var filteredRows = from row in dtResults.AsEnumerable()
+                                               where standingIDs.Contains(row.Field<string>("HostID"))
+                                               select row;
+                            dtResults = filteredRows == null || filteredRows.Count() == 0 ? new DataTable() : filteredRows.CopyToDataTable();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error while filtering facet search based on standing", ex, null, true));
+                    }
+                    finally
+                    {
+                        if (cxConn.IsNotClosed()) { cxConn.Close(); }
+                    }
+                }
+
+                #endregion
+
+                #region Faceted Search - Athletics
+
+                List<ListItem> selectedSports = lbAthletics.Items.Cast<ListItem>().Where(item => item.Selected == true).ToList();
+                if (selectedSports.Count > 0)
+                {
+                    string athleticsList = String.Format("'{0}'", String.Join("','", selectedSports.Select(li => li.Value).ToList()));
+
+                    OdbcConnectionClass3 cxConn = helper.CONNECTION_CX_LIVE;
+                    DataTable dtAthletics = null;
+                    Exception exAthletics = null;
+
+                    try
+                    {
+                        string sqlAthletics = String.Format(@"
+                            SELECT
+	                            TRIM(IR.id::varchar(10)) AS id
+                            FROM
+	                            involve_rec	IR	INNER JOIN	invl_table	IT	ON	TRIM(IR.invl)	=	TRIM(IT.invl)
+												                            AND	IT.sanc_sport	=	'Y'
+                            WHERE
+	                            TODAY	BETWEEN	IR.beg_date AND NVL(IR.end_date, TODAY)
+                            AND
+	                            IT.invl	IN	({0})
+                            GROUP BY
+                                IR.id
+                        ", athleticsList);
+
+                        dtAthletics = cxConn.ConnectToERP(sqlAthletics, ref exAthletics);
+
+                        if (exAthletics != null) { throw exAthletics; }
+                        List<string> athleteIDs = dtAthletics.AsEnumerable().Select(athlete => athlete.Field<string>("id")).ToList();
+                        var filteredRows = from row in dtResults.AsEnumerable()
+                                       where athleteIDs.Contains(row.Field<string>("HostID"))
+                                       select row;
+                        dtResults = filteredRows == null || filteredRows.Count() == 0 ? new DataTable() : filteredRows.CopyToDataTable();
+                    }
+                    catch (Exception ex)
+                    {
+                        this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error while filtering facet search based on athletics", ex, null, true));
+                    }
+                    finally
+                    {
+                        if (cxConn.IsNotClosed()) { cxConn.Close(); }
+                    }
+                }
+
+                #endregion
+
+                #region Faceted Search - Residency
+
+                //string athleticsList = String.Format("'{0}'}", String.Join("','", lbAthletics.Items.Cast<ListItem>().Where(item => item.Selected == true).Select(li => li.Value).ToList()));
+                List<ListItem> selectedResidency = cblResidency.Items.Cast<ListItem>().Where(li => li.Selected).ToList();
+                if (selectedResidency.Count > 0)
+                {
+                    OdbcConnectionClass3 cxConn = helper.CONNECTION_CX_LIVE;
+                    DataTable dtResidency = null;
+                    Exception exResidency = null;
+
+                    string residencyList = String.Format("'{0}'", String.Join("','", selectedResidency.Select(li => li.Value).ToList()));
+
+                    string sqlResidency = String.Format(@"
+                        SELECT
+	                        TRIM(SSR.id::varchar(10)) AS id
+                        FROM
+	                        stu_serv_rec	SSR
+                        WHERE
+	                        SSR.yr	=	{0}
+                        AND
+	                        SSR.sess	=	'{1}'
+                        AND
+	                        SSR.intend_hsg	IN	({2})
+                    ", helper.ACTIVE_YEAR, helper.ACTIVE_SESSION, residencyList);
+
+                    try
+                    {
+
+                        dtResidency = cxConn.ConnectToERP(sqlResidency, ref exResidency);
+                        if (exResidency != null) { throw exResidency; }
+                        List<string> residentIDs = dtResidency.AsEnumerable().Select(res => res.Field<string>("id")).ToList();
+                        var filteredRows = from row in dtResults.AsEnumerable()
+                                           where residentIDs.Contains(row.Field<string>("HostID"))
+                                           select row;
+                        dtResults = filteredRows == null || filteredRows.Count() == 0 ? new DataTable() : filteredRows.CopyToDataTable();
+
+                        this.ParentPortlet.ShowFeedback(FeedbackType.Message, sqlResidency);
+                    }   
+                    catch (Exception ex)
+                    {
+                        this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException(String.Format("<p>Error while filtering facet search based on residency</p><p>{0}</p>", sqlResidency), ex, null, true));
+                    }
+                    finally
+                    {
+                        if (cxConn.IsNotClosed()) { cxConn.Close(); }
+                    }
+                }
+
+                #endregion
+
+                ////////////////////////////////////////////////////////////////////
+
+                this.dgResults.DataSource = dtResults;
+                this.dgResults.DataBind();
+
+                //Update the recordcount
+                this.panelResultCount.Visible = this.btnExportExcel.Visible = true;
+                this.ltlResultCount.Text = dtResults.Rows.Count.ToString();
+            }
+            catch (Exception ex)
+            {
+                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("An exception occurred while running the faceted search.", ex));
+            }
+            finally
+            {
+                if (jicsConn.IsNotClosed()) { jicsConn.Close(); }
+            }
+
+            //this.ParentPortlet.ShowFeedback(FeedbackType.Message, String.Format("<pre>{0}</pre>", sqlResults));
+        }
+
+        #endregion
+
+        [Obsolete]
+        protected void btnSearch_old_Click(object sender, EventArgs e)
         {
             DataTable dtCX = ciHelper.GetCXView();
             DataTable dtJICS = ciHelper.GetStudentProgress();
@@ -270,19 +557,19 @@ namespace Portlet.CheckInAdmin
 
             try
             {
-                List<string> standing = cblStanding.Items.Cast<ListItem>().Where(li => li.Selected).Select(li => li.Value).ToList();
-                if (standing.Count > 0)
-                {
-                    List<DataRow> results = dtResults.AsEnumerable().Where(row => standing.Contains(row.Field<string>("isfreshmantransfer"))).ToList();
-                    UpdateDataTable(ref dtResults, results);
-                }
+                //List<string> standing = cblStanding.Items.Cast<ListItem>().Where(li => li.Selected).Select(li => li.Value).ToList();
+                //if (standing.Count > 0)
+                //{
+                //    List<DataRow> results = dtResults.AsEnumerable().Where(row => standing.Contains(row.Field<string>("isfreshmantransfer"))).ToList();
+                //    UpdateDataTable(ref dtResults, results);
+                //}
 
-                List<string> athlete = cblAthlete.Items.Cast<ListItem>().Where(li => li.Selected).Select(li => li.Value).ToList();
-                if (athlete.Count > 0)
-                {
-                    List<DataRow> results = dtResults.AsEnumerable().Where(row => athlete.Contains(row.Field<string>("is_athlete"))).ToList();
-                    UpdateDataTable(ref dtResults, results);
-                }
+                //List<string> athlete = cblAthlete.Items.Cast<ListItem>().Where(li => li.Selected).Select(li => li.Value).ToList();
+                //if (athlete.Count > 0)
+                //{
+                //    List<DataRow> results = dtResults.AsEnumerable().Where(row => athlete.Contains(row.Field<string>("is_athlete"))).ToList();
+                //    UpdateDataTable(ref dtResults, results);
+                //}
 
                 List<string> residency = cblResidency.Items.Cast<ListItem>().Where(li => li.Selected).Select(li => li.Value).ToList();
                 if (residency.Count > 0)

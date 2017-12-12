@@ -26,36 +26,46 @@
             //console.log('All complete is ' + allComplete + ' for row ' + index);
             $(obj).toggleClass('complete', allComplete);
         });
+
+        assignClassByStatus('Y', 'complete');
+        assignClassByStatus('N', 'incomplete');
+        assignClassByStatus('P', 'pending');
+        assignClassByStatus('W', 'waived');
     });
+
+    function assignClassByStatus(statusCode, className) {
+        $('.facetSearchResults tr td').filter(function () { return $(this).text() == statusCode; }).addClass(className);
+    }
 </script>
 
-<asp:Button ID="btnIndividualLookup" runat="server" Text="Look up student by ID or Last Name" OnClick="btnIndividualLookup_Click" Visible="false" />
+<asp:LinkButton ID="aNameSearch" runat="server" Text="Search by Student Name/ID" OnClick="aNameSearch_Click" />
 
-<asp:Panel ID="panelFacetedSearch" runat="server">
-    <div class="facet">
-        <asp:Label ID="lblStanding" runat="server" CssClass="facetLabel" Text="Standing:" />
-        <asp:CheckBoxList ID="cblStanding" runat="server" CssClass="facetOptions" RepeatDirection="Horizontal">
-            <asp:ListItem Text="Freshman/Transfer" Value="Y" />
-            <asp:ListItem Text="Returning" Value="N" />
-        </asp:CheckBoxList>
-    </div>
-    <div class="facet">
-        <asp:Label ID="lblAthlete" runat="server" CssClass="facetLabel" Text="Athlete:" />
-        <asp:CheckBoxList ID="cblAthlete" runat="server" CssClass="facetOptions" RepeatDirection="Horizontal">
-            <asp:ListItem Text="Yes" Value="Y" />
-            <asp:ListItem Text="No" Value="N" />
-        </asp:CheckBoxList>
-    </div>
-    <div class="facet">
-        <asp:Label ID="lblResidency" runat="server" CssClass="facetLabel" Text="Residency:" />
-        <asp:CheckBoxList ID="cblResidency" runat="server" CssClass="facetOptions" RepeatDirection="Horizontal">
-            <asp:ListItem Text="Resident" Value="R" />
-            <asp:ListItem Text="Commuter" Value="C" />
-            <asp:ListItem Text="Off-Campus" Value="O" />
-        </asp:CheckBoxList>
-    </div>
-    <div class="facet">&nbsp;</div>
-</asp:Panel>
+<fieldset class="fieldsetFacetedSearch">
+    <legend>Search Facets</legend>
+    <asp:Panel ID="panelFacetedSearch" runat="server">
+        <div class="facet">
+            <asp:Label ID="lblStanding" runat="server" CssClass="facetLabel" Text="Standing:" />
+            <asp:DropDownList ID="ddlStanding" runat="server" CssClass="facetOptions">
+                <asp:ListItem Text="Any" Value="" />
+                <asp:ListItem Text="Freshman/Transfer" Value="Y" />
+                <asp:ListItem Text="Returning Student" Value="N" />
+            </asp:DropDownList>
+        </div>
+        <div class="facet">
+            <asp:Label ID="lblAthlete" runat="server" CssClass="facetLabel" Text="Athlete:" />
+            <asp:ListBox ID="lbAthletics" runat="server" SelectionMode="Multiple">
+            </asp:ListBox>
+        </div>
+        <div class="facet">
+            <asp:Label ID="lblResidency" runat="server" CssClass="facetLabel" Text="Residency:" />
+            <asp:CheckBoxList ID="cblResidency" runat="server" CssClass="facetOptions" RepeatDirection="Horizontal">
+                <asp:ListItem Text="Resident" Value="R" />
+                <asp:ListItem Text="Commuter" Value="C" />
+                <asp:ListItem Text="Off-Campus" Value="O" />
+            </asp:CheckBoxList>
+        </div>
+    </asp:Panel>
+</fieldset>
 
 <asp:Table ID="tblOffices" CssClass="tblFacetedSearch" runat="server" CellPadding="0" CellSpacing="0">
     <asp:TableHeaderRow>
@@ -86,6 +96,24 @@
         </asp:Panel>
     </EmptyDataTemplate>
     <Columns>
+        <asp:BoundField DataField="HostID" HeaderText="Carthage ID" ItemStyle-CssClass="basicInfo" />
+        <asp:BoundField DataField="lastname" HeaderText="Last Name" ItemStyle-CssClass="basicInfo" />
+        <asp:BoundField DataField="firstname" HeaderText="First Name" ItemStyle-CssClass="basicInfo" />
+        <asp:BoundField DataField="payment_options_form" HeaderText="Payment Options" />
+        <asp:BoundField DataField="financial_clearance" HeaderText="Financial Clearance" />
+        <asp:BoundField DataField="room_and_board" HeaderText="Room &amp; Board" />
+        <asp:BoundField DataField="entrance_counseling" HeaderText="Entrance Counseling" />
+        <asp:BoundField DataField="stafford_loan" HeaderText="Stafford Loan" />
+        <asp:BoundField DataField="no_missing_documents" HeaderText="No Missing Docs" />
+        <asp:BoundField DataField="verification_worksheet" HeaderText="Verification Worksheet" />
+        <asp:BoundField DataField="medical_forms" HeaderText="Medical Forms" />
+        <asp:BoundField DataField="ferpa_release" HeaderText="Directory FERPA" />
+        <asp:BoundField DataField="verify_address" HeaderText="Verify Address" />
+        <asp:BoundField DataField="verify_majors" HeaderText="Verify Major" />
+        <asp:BoundField DataField="distribute_schedule" HeaderText="Schedule" />
+        <asp:BoundField DataField="community_code" HeaderText="Community Code" />
+        <asp:BoundField DataField="parking_permit" HeaderText="Parking Permit" />
+        <%---
         <asp:BoundField DataField="id" HeaderText="Carthage ID" ItemStyle-CssClass="basicInfo" />
         <asp:BoundField DataField="lastname" HeaderText="Last Name" ItemStyle-CssClass="basicInfo" />
         <asp:BoundField DataField="firstname" HeaderText="First Name" ItemStyle-CssClass="basicInfo" />
@@ -106,5 +134,6 @@
         <asp:BoundField DataField="community_code" HeaderText="Community Code" />
         <asp:BoundField DataField="housing_survey" HeaderText="Housing Survey" />
         <asp:BoundField DataField="parking_permit" HeaderText="Parking Permit" />
+        ---%>
     </Columns>
 </asp:GridView>

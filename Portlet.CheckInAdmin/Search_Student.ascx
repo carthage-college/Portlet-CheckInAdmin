@@ -25,14 +25,24 @@
 
 
 <asp:Label ID="lblSearchResults" runat="server" Visible="false" />
-
-<asp:GridView ID="gvSearchResults" runat="server" CellSpacing="0" CssClass="nameSearchResults" OnInit="gvSearchResults_Init" OnRowCreated="gvSearchResults_RowCreated" OnRowDataBound="gvSearchResults_RowDataBound" AutoGenerateColumns="false" DataKeyNames="id">
+<%--<asp:GridView ID="gvSearchResults" runat="server" CellSpacing="0" CssClass="nameSearchResults" OnInit="gvSearchResults_Init" OnRowCreated="gvSearchResults_RowCreated" OnRowDataBound="gvSearchResults_RowDataBound" AutoGenerateColumns="false" DataKeyNames="id">--%>
+<asp:GridView ID="gvSearchResults" runat="server" CellSpacing="0" CssClass="nameSearchResults" OnRowDataBound="gvSearchResults_RowDataBound" AutoGenerateColumns="true" DataKeyNames="HostID">
     <Columns>
         <asp:TemplateField HeaderText="Name">
             <ItemTemplate>
                 <asp:LinkButton ID="lbStudent" runat="server" OnClick="lbStudentDetail_Click" />
             </ItemTemplate>
         </asp:TemplateField>
+        <%--
+        <asp:BoundColumn DataField="LastName" HeaderText="Last Name" />
+        <asp:BoundColumn DataField="FirstName" HeaderText="First Name" />
+        <asp:BoundColumn DataField="HostID" HeaderText="ID" />
+        <asp:BoundColumn DataField="Email" HeaderText="Email" />
+        <asp:BoundColumn DataField="IsCheckedIn" HeaderText="Checked In" />
+        <asp:BoundColumn DataField="IsActive" HeaderText="Active" />
+        <asp:BoundColumn DataField="FirstAccess" HeaderText="First Access" />
+        <asp:BoundColumn DataField="LastAccess" HeaderText="Last Access" />
+        --%>
     </Columns>
 </asp:GridView>
 
