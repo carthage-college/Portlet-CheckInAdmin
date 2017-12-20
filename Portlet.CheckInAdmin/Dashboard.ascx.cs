@@ -50,6 +50,7 @@ namespace Portlet.CheckInAdmin
 
         private void LoadStudentProgress()
         {
+            #region Commented out
             //DataTable dtStudentProgress = ciHelper.StudentProgressCounts();
             //DataTable dtStudentProgressCounts = new DataTable();
             //dtStudentProgressCounts.Columns.AddRange(new DataColumn[]{
@@ -66,12 +67,15 @@ namespace Portlet.CheckInAdmin
             //dr["Started"] = dtStudentProgress.AsEnumerable().Count(row => row.Field<int>("completed_task_count") + row.Field<int>("waived_task_count") < totalTasks - 1 && row.Field<int>("completed_task_count") > 0);
             //dr["NotStarted"] = dtStudentProgress.AsEnumerable().Count(row => row.Field<int>("completed_task_count") == 0);
             //dtStudentProgressCounts.Rows.Add(dr);
+            #endregion
 
             #region Faster Progress Count
             OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
             DataTable dtStudentProgressCounts = null;
             Exception exStudentProgressCounts = null;
-//            string sqlProgress = @"
+
+            #region Commented out
+            //            string sqlProgress = @"
 //                SELECT
 //	                SUM(CASE Summary.IsComplete WHEN 'Y' THEN 1 ELSE 0 END) AS Complete,
 //	                SUM(CASE Summary.IsMissing1 WHEN 'Y' THEN 1 ELSE 0 END) AS Missing1,
@@ -95,7 +99,8 @@ namespace Portlet.CheckInAdmin
 //		                GROUP BY
 //			                UserID
 //	                )	Summary
-//            ";
+            //            ";
+            #endregion
 
             string sqlProgress = @"
 	            SELECT
@@ -138,7 +143,8 @@ namespace Portlet.CheckInAdmin
                 if (jicsConn.IsNotClosed()) { jicsConn.Close(); }
             }
 
-//            OdbcConnectionClass3 cxConn = helper.CONNECTION_CX;
+            #region Commented out
+            //            OdbcConnectionClass3 cxConn = helper.CONNECTION_CX;
 //            DataTable dtUnfinishedCX = null;
 //            Exception exUnfinishedCX = null;
 //            string sqlUnfinishedCX = String.Format(@"
@@ -201,14 +207,16 @@ namespace Portlet.CheckInAdmin
 //            finally
 //            {
 //                if (cxConn.IsNotClosed()) { cxConn.Close(); }
-//            }
+            //            }
+            #endregion
             #endregion
 
 
             chartStudentProgress.DataSource = dtStudentProgressCounts;
             chartStudentProgress.DataBind();
 
-//            DataTable dtStudentStarted = ciHelper.GetMergedView();
+            #region Commented out
+            //            DataTable dtStudentStarted = ciHelper.GetMergedView();
 //            DataTable dtStudentMissing1 = dtStudentStarted;
 
 //            DataTable dtStudentComplete = ciHelper.GetCompletedStudents();
@@ -251,7 +259,8 @@ namespace Portlet.CheckInAdmin
 //            finally
 //            {
 //                if (jicsConn.IsNotClosed()) { jicsConn.Close(); }
-//            }
+            //            }
+            #endregion
 
             this.shStudentProgress.Text = String.Format("Student Progress for {0} {1}", helper.ACTIVE_SESSION_TEXT, helper.ACTIVE_YEAR);
         }
@@ -262,7 +271,9 @@ namespace Portlet.CheckInAdmin
 
             DataTable dtStudentActivity = null;
             Exception exStudentActivity = null;
-//            string sqlStudentActivity = String.Format(@"
+
+            #region Commented out
+            //            string sqlStudentActivity = String.Format(@"
 //                SELECT
 //                    SUBSTRING(CONVERT(VARCHAR(10), HT.minTime, 7),1, 6) AS DateLabel, DATEPART(DAYOFYEAR, HT.minTime) AS Sequence, COUNT(SP.ProgressID) AS Completed
 //                FROM
@@ -282,7 +293,9 @@ namespace Portlet.CheckInAdmin
 //                    SUBSTRING(CONVERT(VARCHAR(10), HT.minTime, 7),1, 6), DATEPART(DAYOFYEAR, HT.minTime)
 //                ORDER BY
 //                    Sequence
-//            ");
+            //            ");
+            #endregion
+
             string sqlStudentActivity = String.Format(@"
 	            SELECT
 		            CONVERT(CHAR(8), SP.CompletedOn, 112) AS DateOrder, SUBSTRING(CONVERT(VARCHAR(8), SP.CompletedOn, 1), 1, 5) AS DateLabel, COUNT(*) AS Completed
@@ -294,12 +307,15 @@ namespace Portlet.CheckInAdmin
 		            SP.Sess	=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveSession')
 	            AND
 		            SP.TaskStatus	=	'Y'
+				AND
+					SP.CompletedOn	>=	'2017-12-11'
 	            GROUP BY
 		            CONVERT(CHAR(8), SP.CompletedOn, 112), SUBSTRING(CONVERT(VARCHAR(8), SP.CompletedOn, 1), 1, 5)
 	            ORDER BY
 		            DateOrder
             ");
 
+            #region 4 hour block logic
             /* 4-hour blocks */
             //            string sqlStudentActivity = String.Format(@"
             //                SELECT
@@ -355,6 +371,7 @@ namespace Portlet.CheckInAdmin
             //                ORDER BY
             //                    HT.minTime
             //            ");
+            #endregion
 
             try
             {
@@ -482,85 +499,105 @@ namespace Portlet.CheckInAdmin
 
         protected void btnIncomplete_Click(object sender, EventArgs e)
         {
-            #region New Take on Incompletes
-            DataTable dtIncomplete = null;
+            #region Obsolete
+//            DataTable dtIncomplete = null;
 
-            OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
-            DataTable dtPortalComplete = null;
-            Exception exPortalComplete = null;
-            string sqlPortalComplete = @"
-		        SELECT
-			        CAST(U.HostID AS INT) AS HostID
-		        FROM
-			        CI_StudentProgress	SP	INNER JOIN	FWK_User	U	ON	SP.UserID	=	U.ID
-		        WHERE
-			        SP.TaskStatus	IN	('Y','W')
-		        AND
-			        SP.Yr	=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveYear')
-		        AND
-			        SP.Sess	=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveSession')
-		        GROUP BY
-			        HostID
-				HAVING
-					COUNT(*) = (SELECT COUNT(*) FROM CI_OfficeTask)
-            ";
+//            OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
+//            DataTable dtPortalComplete = null;
+//            Exception exPortalComplete = null;
+//            string sqlPortalComplete = @"
+//		        SELECT
+//			        CAST(U.HostID AS INT) AS HostID
+//		        FROM
+//			        CI_StudentProgress	SP	INNER JOIN	FWK_User	U	ON	SP.UserID	=	U.ID
+//		        WHERE
+//			        SP.TaskStatus	IN	('Y','W')
+//		        AND
+//			        SP.Yr	=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveYear')
+//		        AND
+//			        SP.Sess	=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveSession')
+//		        GROUP BY
+//			        HostID
+//				HAVING
+//					COUNT(*) = (SELECT COUNT(*) FROM CI_OfficeTask)
+//            ";
+//            try
+//            {
+//                dtPortalComplete = jicsConn.ConnectToERP(sqlPortalComplete, ref exPortalComplete);
+//                if (exPortalComplete != null) { throw exPortalComplete; }
+
+//                Exception exCxIncomplete = null;
+//                OdbcConnectionClass3 cxConn = helper.CONNECTION_CX;
+
+//                //Initialize to "0" for early in the process when no students have completed check-in
+//                string idsAsCommaList = "0";
+//                if (dtPortalComplete.Rows.Count > 0) {
+//                    idsAsCommaList = string.Join(",", dtPortalComplete.AsEnumerable().Select(row => row.Field<int>("id")).ToArray());
+//                }
+//                string sqlCxIncomplete = String.Format(@"
+//                    SELECT
+//	                    DIR.id, DIR.lastname, DIR.firstname, DIR.email, DIR.phone
+//                    FROM
+//	                    stu_acad_rec	SAR	INNER JOIN	directory_vw	DIR	ON	SAR.id	=	DIR.id
+//                    WHERE
+//	                    SAR.yr = {0}
+//                    AND
+//	                    SAR.sess = '{1}'
+//                    AND
+//	                    SAR.reg_stat <> 'C'
+//                    AND
+//	                    SAR.subprog IN  ('TRAD','TRAP')
+//                    AND
+//	                    SAR.id NOT IN ({2})
+//                ", helper.ACTIVE_YEAR, helper.ACTIVE_SESSION, idsAsCommaList);
+
+//                try
+//                {
+//                    dtIncomplete = cxConn.ConnectToERP(sqlCxIncomplete, ref exCxIncomplete);
+//                    if (exCxIncomplete != null) { throw exCxIncomplete; }
+//                }
+//                catch (Exception exCX)
+//                {
+//                    this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error retrieving incomplete useres from JICS", exCX, null, true));
+//                }
+//            }
+//            catch (Exception ex)
+//            {
+//                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error retrieving incomplete users from JICS", ex, null, true));
+//            }
+//            finally
+//            {
+//                if (jicsConn.IsNotClosed()) { jicsConn.Close(); }
+//            }
+            #endregion
+
+            OdbcConnectionClass3 spConn = helper.CONNECTION_SP;
+            DataTable dtIncomplete = null;
+            Exception exIncomplete = null;
+            string sqlIncomplete = "EXECUTE dbo.CUS_spCheckIn_ExportIncompleteTasks";
+
             try
             {
-                dtPortalComplete = jicsConn.ConnectToERP(sqlPortalComplete, ref exPortalComplete);
-                if (exPortalComplete != null) { throw exPortalComplete; }
-
-                Exception exCxIncomplete = null;
-                OdbcConnectionClass3 cxConn = helper.CONNECTION_CX;
-
-                //Initialize to "0" for early in the process when no students have completed check-in
-                string idsAsCommaList = "0";
-                if (dtPortalComplete.Rows.Count > 0) {
-                    idsAsCommaList = string.Join(",", dtPortalComplete.AsEnumerable().Select(row => row.Field<int>("id")).ToArray());
-                }
-                string sqlCxIncomplete = String.Format(@"
-                    SELECT
-	                    DIR.id, DIR.lastname, DIR.firstname, DIR.email, DIR.phone
-                    FROM
-	                    stu_acad_rec	SAR	INNER JOIN	directory_vw	DIR	ON	SAR.id	=	DIR.id
-                    WHERE
-	                    SAR.yr = {0}
-                    AND
-	                    SAR.sess = '{1}'
-                    AND
-	                    SAR.reg_stat <> 'C'
-                    AND
-	                    SAR.subprog IN  ('TRAD','TRAP')
-                    AND
-	                    SAR.id NOT IN ({2})
-                ", helper.ACTIVE_YEAR, helper.ACTIVE_SESSION, idsAsCommaList);
-
-                try
-                {
-                    dtIncomplete = cxConn.ConnectToERP(sqlCxIncomplete, ref exCxIncomplete);
-                    if (exCxIncomplete != null) { throw exCxIncomplete; }
-                }
-                catch (Exception exCX)
-                {
-                    this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error retrieving incomplete useres from JICS", exCX, null, true));
-                }
+                dtIncomplete = spConn.ConnectToERP(sqlIncomplete, ref exIncomplete);
+                if (exIncomplete != null) { throw exIncomplete; }
             }
             catch (Exception ex)
             {
-                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error retrieving incomplete users from JICS", ex, null, true));
+                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("An exception occurred while exporting incomplete tasks", ex, null, true));
             }
             finally
             {
-                if (jicsConn.IsNotClosed()) { jicsConn.Close(); }
+                if (spConn.IsNotClosed()) { spConn.Close(); }
             }
-            #endregion
 
             //DataTable dtIncomplete = ciHelper.GetIncompleteStudents();
             this.gvIncomplete.DataSource = dtIncomplete;
             this.gvIncomplete.DataBind();
+            this.gvIncomplete.Visible = true;
 
             Response.Clear();
             Response.Buffer = true;
-            Response.AddHeader("content-disposition", "attachment;filename=CheckInExport.xls");
+            Response.AddHeader("content-disposition", "attachment;filename=Check-In Students with Incomplete Tasks.xls");
             Response.Charset = "";
             Response.ContentType = "application/vnd.ms-excel";
 
@@ -593,6 +630,8 @@ namespace Portlet.CheckInAdmin
                 Response.Flush();
                 Response.End();
             }
+
+            this.gvIncomplete.Visible = false;
         }
 
         protected void btnUpdateProgress_Click(object sender, EventArgs e)

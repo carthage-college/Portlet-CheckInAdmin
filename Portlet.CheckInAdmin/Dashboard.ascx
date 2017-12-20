@@ -11,11 +11,12 @@
         <h4>Download Center</h4>
         <asp:GridView ID="gvIncomplete" runat="server" Visible="false" AutoGenerateColumns="false" GridLines="Both">
             <Columns>
-                <asp:BoundField DataField="id" HeaderText="Carthage ID" />
+                <asp:BoundField DataField="HostID" HeaderText="Carthage ID" />
                 <asp:BoundField DataField="lastname" HeaderText="Last Name" />
                 <asp:BoundField DataField="firstname" HeaderText="First Name" />
                 <asp:BoundField DataField="email" HeaderText="Email" />
-                <asp:BoundField DataField="phone" HeaderText="Phone" />
+                <asp:BoundField DataField="TaskList" HeaderText="Incomplete Tasks" />
+                <%--<asp:BoundField DataField="phone" HeaderText="Phone" />--%>
             </Columns>
         </asp:GridView>
         <asp:Button ID="btnIncomplete" runat="server" Text="Students with tasks remaining" OnClick="btnIncomplete_Click" />

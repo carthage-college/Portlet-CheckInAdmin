@@ -1,6 +1,9 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeBehind="Facet_Search.ascx.cs" Inherits="Portlet.CheckInAdmin.Facet_Search" %>
 <%@ Register Assembly="Jenzabar.Common" Namespace="Jenzabar.Common.Web.UI.Controls" TagPrefix="common" %>
 
+<style type="text/css">
+    .hide {display:none;}
+</style>
 <script type="text/javascript">
     $(function () {
         $('tr.radioRowOffice td input[type="radio"]').click(function () {
@@ -97,22 +100,23 @@
     </EmptyDataTemplate>
     <Columns>
         <asp:BoundField DataField="HostID" HeaderText="Carthage ID" ItemStyle-CssClass="basicInfo" />
-        <asp:BoundField DataField="lastname" HeaderText="Last Name" ItemStyle-CssClass="basicInfo" />
-        <asp:BoundField DataField="firstname" HeaderText="First Name" ItemStyle-CssClass="basicInfo" />
-        <asp:BoundField DataField="payment_options_form" HeaderText="Payment Options" />
-        <asp:BoundField DataField="financial_clearance" HeaderText="Financial Clearance" />
-        <asp:BoundField DataField="room_and_board" HeaderText="Room &amp; Board" />
-        <asp:BoundField DataField="entrance_counseling" HeaderText="Entrance Counseling" />
-        <asp:BoundField DataField="stafford_loan" HeaderText="Stafford Loan" />
-        <asp:BoundField DataField="no_missing_documents" HeaderText="No Missing Docs" />
-        <asp:BoundField DataField="verification_worksheet" HeaderText="Verification Worksheet" />
-        <asp:BoundField DataField="medical_forms" HeaderText="Medical Forms" />
-        <asp:BoundField DataField="ferpa_release" HeaderText="Directory FERPA" />
-        <asp:BoundField DataField="verify_address" HeaderText="Verify Address" />
-        <asp:BoundField DataField="verify_majors" HeaderText="Verify Major" />
-        <asp:BoundField DataField="distribute_schedule" HeaderText="Schedule" />
-        <asp:BoundField DataField="community_code" HeaderText="Community Code" />
-        <asp:BoundField DataField="parking_permit" HeaderText="Parking Permit" />
+        <asp:BoundField DataField="Last Name" HeaderText="Last Name" ItemStyle-CssClass="basicInfo" />
+        <asp:BoundField DataField="First Name" HeaderText="First Name" ItemStyle-CssClass="basicInfo" />
+        <asp:BoundField DataField="Email" HeaderText="Email" HeaderStyle-CssClass="hide" ItemStyle-CssClass="hide" />
+        <asp:BoundField DataField="Payment Options Form" HeaderText="Payment Options" />
+        <asp:BoundField DataField="Financial Clearance" HeaderText="Financial Clearance" />
+        <asp:BoundField DataField="Room And Board" HeaderText="Room &amp; Board" />
+        <asp:BoundField DataField="Entrance Counseling" HeaderText="Entrance Counseling" />
+        <asp:BoundField DataField="Stafford Loan" HeaderText="Stafford Loan" />
+        <asp:BoundField DataField="No Missing Documents" HeaderText="No Missing Docs" />
+        <asp:BoundField DataField="Verification Worksheet" HeaderText="Verification Worksheet" />
+        <asp:BoundField DataField="Medical Forms" HeaderText="Medical Forms" />
+        <asp:BoundField DataField="Ferpa Release" HeaderText="Directory FERPA" />
+        <asp:BoundField DataField="Verify Address" HeaderText="Verify Address" />
+        <asp:BoundField DataField="Verify Majors" HeaderText="Verify Major" />
+        <asp:BoundField DataField="Distribute Schedule" HeaderText="Schedule" />
+        <asp:BoundField DataField="Community Code" HeaderText="Community Code" />
+        <asp:BoundField DataField="Parking Permit" HeaderText="Parking Permit" />
         <%---
         <asp:BoundField DataField="id" HeaderText="Carthage ID" ItemStyle-CssClass="basicInfo" />
         <asp:BoundField DataField="lastname" HeaderText="Last Name" ItemStyle-CssClass="basicInfo" />

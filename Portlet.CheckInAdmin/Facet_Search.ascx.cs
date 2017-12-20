@@ -19,6 +19,7 @@ using System.IO;
 using System.Drawing;
 using System.Data.SqlClient;
 using System.Configuration;
+using System.Globalization;
 
 namespace Portlet.CheckInAdmin
 {
@@ -131,6 +132,7 @@ namespace Portlet.CheckInAdmin
         /// </summary>
         /// <param name="dt">The DataTable with the initial batch of search results</param>
         /// <param name="drList">Collection of DataRow objects which make up the new dataset</param>
+        [Obsolete]
         private void UpdateDataTable(ref DataTable dt, List<DataRow> drList)
         {
             if (drList.Count == 0) { dt.Rows.Clear(); }
@@ -266,6 +268,45 @@ namespace Portlet.CheckInAdmin
 
         protected void btnExportExcel_Click(object sender, EventArgs e)
         {
+            DataTable dtResults = GetSearchResults();
+
+            var mstream = new MemoryStream();
+            var sw = new StreamWriter(mstream);
+            var dgResults = ciHelper.CreateDataGrid();
+
+            ciHelper.ConfigureDataGrid(ref dgResults, dtResults, true, false, true, 5, "");
+
+            dgResults.DataSource = dtResults;
+            dgResults.DataBind();
+
+            var stringWrite = new StringWriter();
+            var htmlWrite = new HtmlTextWriter(stringWrite);
+            dgResults.RenderControl(htmlWrite);
+
+            htmlWrite.Flush();
+
+            sw.WriteLine(stringWrite.ToString().Replace("\n", "").Replace("\r", "").Replace("  ", ""));
+
+            sw.Flush();
+            sw.Close();
+
+            byte[] byteArray = mstream.ToArray();
+
+            mstream.Flush();
+            mstream.Close();
+
+            Response.Clear();
+            Response.AddHeader("Content-Type", "application/vnd.ms-excel");
+            Response.AddHeader("Content-Disposition", "attachment; filename=ExportedData.xls");
+            Response.AddHeader("Content-Length", byteArray.Length.ToString(CultureInfo.InvariantCulture));
+            Response.ContentType = "application/octet-stream";
+            Response.BinaryWrite(byteArray);
+            Response.End();
+        }
+
+        [Obsolete]
+        protected void btnExportExcel_old_Click(object sender, EventArgs e)
+        {
             Response.Clear();
             Response.Buffer = true;
             Response.AddHeader("content-disposition", "attachment;filename=CheckInExport.xls");
@@ -310,6 +351,19 @@ namespace Portlet.CheckInAdmin
 
         protected void btnSearch_Click(object sender, EventArgs e)
         {
+            DataTable dtResults = GetSearchResults();
+            this.dgResults.DataSource = dtResults;
+            this.dgResults.DataBind();
+
+            //Update the recordcount
+            this.panelResultCount.Visible = this.btnExportExcel.Visible = true;
+            this.ltlResultCount.Text = dtResults.Rows.Count.ToString();
+        }
+
+        #endregion
+
+        protected DataTable GetSearchResults()
+        {
             OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
             DataTable dtResults = null;
             Exception exResults = null;
@@ -319,16 +373,20 @@ namespace Portlet.CheckInAdmin
             //Get the offices and task which are active for the current year/session
             DataTable dtOfficeTask = ciHelper.GetOfficeAndTask();
             string sqlSelect = "", sqlFrom = "", sqlWhere = "";
-            
+
             //Loop through each task
             foreach (DataRow dr in dtOfficeTask.Rows)
             {
                 string viewColumn = dr["ViewColumn"].ToString();
                 string tableAlias = viewColumn.Replace("_", "");
 
+                //Using ToTitleCase() to capitalize each word in the column alias
+                TextInfo textinfo = new CultureInfo("en-US", false).TextInfo;
+                string columnAlias = textinfo.ToTitleCase(viewColumn.Replace('_', ' '));
+
                 //Build SELECT portion of SQL statment
-                sqlSelect = String.Format("{0}, {1}.TaskStatus AS '{2}'", sqlSelect, tableAlias, viewColumn);
-                
+                sqlSelect = String.Format("{0}, {1}.TaskStatus AS '{2}'", sqlSelect, tableAlias, columnAlias);
+
                 //Build JOINS for SQL statement
                 sqlFrom = String.Format(@"{0}
                             LEFT JOIN   CI_StudentProgress  {1} ON  U.ID        =   {1}.UserID
@@ -339,10 +397,10 @@ namespace Portlet.CheckInAdmin
 
                 //Get the collection of radio buttons which correspond to the current task
                 List<RadioButton> radioForTask = GetRadioGroup(tblOffices, String.Format("Task{0}", viewColumn));
-                
+
                 //Was a radio button other than "Any" selected for this task?
                 RadioButton selectedRadio = radioForTask.FirstOrDefault(rb => rb.Checked == true && !rb.ID.EndsWith("*"));
-                
+
                 if (radioForTask.Contains(selectedRadio))
                 {
                     //Because some columns address multiple statuses (Y/W, N/P, etc), turn each status into an item in a list and format it for the SQL statement
@@ -352,7 +410,7 @@ namespace Portlet.CheckInAdmin
                     {
                         status = String.Format("{0}{1}'{2}'", status, String.IsNullOrWhiteSpace(status) ? "" : ",", stat);
                     }
-                    
+
                     sqlWhere = String.Format("{0} AND {1}.TaskStatus IN ({2})", sqlWhere, tableAlias, status);
                 }
             }
@@ -361,7 +419,7 @@ namespace Portlet.CheckInAdmin
 
             string sqlResults = String.Format(@"
                 SELECT
-                    CAST(CAST(U.HostID AS INT) AS VARCHAR(10)) AS HostID, U.LastName, U.FirstName, U.Email, '' AS standing, '' AS athlete, '' AS residency {0}
+                    CAST(CAST(U.HostID AS INT) AS VARCHAR(10)) AS HostID, U.LastName AS 'Last Name', U.FirstName AS 'First Name', U.Email, '' AS Standing, '' AS Athlete, '' AS Residency {0}
                 FROM
                     CI_StudentMetaData  SMD INNER JOIN  FWK_User    U   ON  SMD.UserID  =   U.ID
                                             {1}
@@ -396,8 +454,8 @@ namespace Portlet.CheckInAdmin
 	                        status_code	{0} IN ('PFF','PTR')
                         GROUP BY
                             id
-                    ", (this.ddlStanding.SelectedValue == "N" ? "NOT" : "") );
-                    
+                    ", (this.ddlStanding.SelectedValue == "N" ? "NOT" : ""));
+
                     try
                     {
                         dtStanding = cxConn.ConnectToERP(sqlStanding, ref exStanding);
@@ -455,8 +513,8 @@ namespace Portlet.CheckInAdmin
                         if (exAthletics != null) { throw exAthletics; }
                         List<string> athleteIDs = dtAthletics.AsEnumerable().Select(athlete => athlete.Field<string>("id")).ToList();
                         var filteredRows = from row in dtResults.AsEnumerable()
-                                       where athleteIDs.Contains(row.Field<string>("HostID"))
-                                       select row;
+                                           where athleteIDs.Contains(row.Field<string>("HostID"))
+                                           select row;
                         dtResults = filteredRows == null || filteredRows.Count() == 0 ? new DataTable() : filteredRows.CopyToDataTable();
                     }
                     catch (Exception ex)
@@ -473,7 +531,6 @@ namespace Portlet.CheckInAdmin
 
                 #region Faceted Search - Residency
 
-                //string athleticsList = String.Format("'{0}'}", String.Join("','", lbAthletics.Items.Cast<ListItem>().Where(item => item.Selected == true).Select(li => li.Value).ToList()));
                 List<ListItem> selectedResidency = cblResidency.Items.Cast<ListItem>().Where(li => li.Selected).ToList();
                 if (selectedResidency.Count > 0)
                 {
@@ -506,9 +563,7 @@ namespace Portlet.CheckInAdmin
                                            where residentIDs.Contains(row.Field<string>("HostID"))
                                            select row;
                         dtResults = filteredRows == null || filteredRows.Count() == 0 ? new DataTable() : filteredRows.CopyToDataTable();
-
-                        this.ParentPortlet.ShowFeedback(FeedbackType.Message, sqlResidency);
-                    }   
+                    }
                     catch (Exception ex)
                     {
                         this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException(String.Format("<p>Error while filtering facet search based on residency</p><p>{0}</p>", sqlResidency), ex, null, true));
@@ -522,13 +577,6 @@ namespace Portlet.CheckInAdmin
                 #endregion
 
                 ////////////////////////////////////////////////////////////////////
-
-                this.dgResults.DataSource = dtResults;
-                this.dgResults.DataBind();
-
-                //Update the recordcount
-                this.panelResultCount.Visible = this.btnExportExcel.Visible = true;
-                this.ltlResultCount.Text = dtResults.Rows.Count.ToString();
             }
             catch (Exception ex)
             {
@@ -538,11 +586,8 @@ namespace Portlet.CheckInAdmin
             {
                 if (jicsConn.IsNotClosed()) { jicsConn.Close(); }
             }
-
-            //this.ParentPortlet.ShowFeedback(FeedbackType.Message, String.Format("<pre>{0}</pre>", sqlResults));
+            return dtResults;
         }
-
-        #endregion
 
         [Obsolete]
         protected void btnSearch_old_Click(object sender, EventArgs e)

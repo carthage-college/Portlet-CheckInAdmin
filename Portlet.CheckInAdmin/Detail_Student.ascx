@@ -78,8 +78,8 @@
             </ItemTemplate>
         </asp:TemplateColumn>
         <asp:BoundColumn DataField="CompletedBySystem" HeaderText="System" />
-        <asp:BoundColumn DataField="CompletedOn" HeaderText="Date" DataFormatString="{0:MMMM d, yyyy}" />
-        <asp:BoundColumn DataField="ChangedBy" HeaderText="Changed By" />
+        <asp:BoundColumn DataField="StatusDate" HeaderText="Date" DataFormatString="{0:MMMM d, yyyy}" />
+        <asp:BoundColumn DataField="StatusByID" HeaderText="Changed By" />
         <asp:BoundColumn DataField="StatusReason" HeaderText="Reason for Change" />
     </Columns>
 </asp:DataGrid>

@@ -16,6 +16,9 @@ using System.Drawing;
 using System.Data.SqlClient;
 using System.Configuration;
 
+using System.Text;
+using System.Globalization;
+
 namespace Portlet.CheckInAdmin
 {
     public class CheckInAdminHelper
@@ -60,6 +63,81 @@ namespace Portlet.CheckInAdmin
         }
 
         #endregion
+
+        public void CreateXLS(DataTable dt)
+        {
+            string strContentType = "text/plain",
+                strFilename = "ErrorOutput.txt",
+                fileName = "ExportedData";
+
+            var mstream = new MemoryStream();
+            var sw = new StreamWriter(mstream);
+            var dgResults = CreateDataGrid();
+
+            ConfigureDataGrid(ref dgResults,
+                                dt,
+                                true, //Show column headings
+                                false, // Alternate row colors
+                                true, // Show gridlines
+                                5, //Cell padding
+                                ""); //Column value
+
+
+            dgResults.DataSource = dt;
+            dgResults.DataBind();
+
+            var stringWrite = new StringWriter();
+            var htmlWrite = new HtmlTextWriter(stringWrite);
+            dgResults.RenderControl(htmlWrite);
+
+            htmlWrite.Flush();
+
+            sw.WriteLine(stringWrite.ToString().Replace("\n", "").Replace("\r", "").Replace("  ", ""));
+            strContentType = "application/vnd.ms-excel";
+            strFilename = fileName + ".xls";
+        }
+
+        public DataGrid CreateDataGrid()
+        {
+            var dgResults = new DataGrid
+            {
+                PageSize = 30,
+                BorderWidth = 1,
+                BorderStyle = BorderStyle.Solid//, BorderColor = System.Drawing.Color.FromArgb(224, 224, 224)
+            };
+            //dgResults.AlternatingItemStyle.BackColor = System.Drawing.Color.FromArgb(224, 224, 224);
+            dgResults.HeaderStyle.Font.Bold = true;
+            return dgResults;
+        }
+
+        public void ConfigureDataGrid(ref DataGrid dgResults, DataTable dt, bool showColumnHeadings, bool useAlternatingRowColor, bool showGridLines, Int16 cellPadding, string columnLabels)
+        {
+            dgResults.ShowHeader = showColumnHeadings;
+
+            //dgResults.AlternatingItemStyle.BackColor = useAlternatingRowColor ? dgResults.BorderColor : dgResults.BackColor;
+
+            dgResults.GridLines = showGridLines ? GridLines.Both : GridLines.None;
+            dgResults.BorderStyle = showGridLines ? BorderStyle.Solid : BorderStyle.None;
+
+            dgResults.CellPadding = cellPadding;
+
+            if (showColumnHeadings)
+            {
+                var strColumnLabel = columnLabels.Split(',');
+
+                for (var ii = 0; ii < dt.Columns.Count; ii++)
+                {
+                    try
+                    {
+                        dt.Columns[ii].ColumnName = strColumnLabel[ii].Trim();
+                    }
+                    catch
+                    {
+                        //do nothing
+                    }
+                }
+            }
+        }
 
         public string GetTaskStatus(CheckInTasks task, string hostID)
         {
@@ -225,6 +303,7 @@ namespace Portlet.CheckInAdmin
             return dtTasks.AsEnumerable().Select(task => task.Field<string>("ViewColumn")).ToList();
         }
 
+        [Obsolete]
         public DataTable GetCXView()
         {
             OdbcConnectionClass3 cxConn = helper.CONNECTION_CX;
@@ -403,6 +482,7 @@ namespace Portlet.CheckInAdmin
             return dtView;
         }
 
+        [Obsolete]
         public DataTable GetStudentProgress()
         {
             OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
@@ -431,6 +511,7 @@ namespace Portlet.CheckInAdmin
             return dtSP;
         }
 
+        [Obsolete]
         public DataTable GetMergedView()
         {
             DataTable dtCX = GetCXView();
@@ -480,6 +561,7 @@ namespace Portlet.CheckInAdmin
             return dtCX;
         }
 
+        [Obsolete]
         public DataTable StudentProgressCounts()
         {
             DataTable dtMerged = GetMergedView();
@@ -505,6 +587,7 @@ namespace Portlet.CheckInAdmin
             return dtMerged;
         }
 
+        [Obsolete]
         public DataTable GetCompletedStudents()
         {
             DataTable dtComplete = GetMergedView();
@@ -539,6 +622,7 @@ namespace Portlet.CheckInAdmin
             return dtComplete;
         }
 
+        [Obsolete]
         public DataTable GetIncompleteStudents()
         {
             DataTable dtAllStudents = GetMergedView(),
