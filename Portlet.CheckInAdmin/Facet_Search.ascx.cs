@@ -427,6 +427,8 @@ namespace Portlet.CheckInAdmin
                     SMD.ActiveYear      =   (SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveYear')
                 AND
                     SMD.ActiveSession   =   (SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveSession')
+                AND
+                    SMD.IsActive        =   1
                 {2}
                 ORDER BY
                     U.LastName, U.FirstName, U.Email

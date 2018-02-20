@@ -71,6 +71,7 @@ namespace Portlet.CheckInAdmin
 
             #region Faster Progress Count
             OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
+            OdbcConnectionClass3 spConn = helper.CONNECTION_SP;
             DataTable dtStudentProgressCounts = null;
             Exception exStudentProgressCounts = null;
 
@@ -102,36 +103,12 @@ namespace Portlet.CheckInAdmin
             //            ";
             #endregion
 
-            string sqlProgress = @"
-	            SELECT
-		            SUM(CASE WHEN Summary.IncompleteTaskCount = 0 THEN 1 ELSE 0 END) AS 'Complete',
-		            SUM(CASE WHEN Summary.IncompleteTaskCount = 1 THEN 1 ELSE 0 END) AS 'Missing1',
-		            SUM(CASE WHEN Summary.CompleteTaskCount > 0 AND Summary.IncompleteTaskCount > 1 THEN 1 ELSE 0 END) AS 'Started',
-		            SUM(CASE WHEN Summary.CompleteTaskCount = 0 THEN 1 ELSE 0 END) AS 'NotStarted'
-	            FROM
-		            (
-			            SELECT
-				            U.ID, CAST(U.HostID AS INT) AS HostID, U.LastName, U.FirstName, SMD.IsActive, SMD.IsCheckedIn, SMD.FirstAccess, SMD.LastAccess,
-				            SUM(CASE WHEN SP.TaskStatus IN ('Y','W') THEN 1 ELSE 0 END) AS CompleteTaskCount,
-				            SUM(CASE WHEN SP.TaskStatus IN ('N','P') THEN 1 ELSE 0 END) AS IncompleteTaskCount
-			            FROM
-				            CI_StudentMetaData	SMD	INNER JOIN	FWK_User			U	ON	SMD.UserID			=	U.ID
-										            LEFT JOIN	CI_StudentProgress	SP	ON	SMD.UserID			=	SP.UserID
-																			            AND	SMD.ActiveYear		=	SP.Yr
-																			            AND	SMD.ActiveSession	=	SP.Sess
-			            WHERE
-				            SMD.ActiveYear		=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveYear')
-			            AND
-				            SMD.ActiveSession	=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveSession')
-			            GROUP BY
-				            U.ID, HostID, U.LastName, U.FirstName, SMD.IsActive, SMD.IsCheckedIn, SMD.FirstAccess, SMD.LastAccess
-			            --ORDER BY
-			            --	U.LastName, U.FirstName
-		            )	Summary";
+            string sqlProgress = @"EXECUTE CUS_spCheckIn_GetStudentProgressSummary";
             
             try
             {
-                dtStudentProgressCounts = jicsConn.ConnectToERP(sqlProgress, ref exStudentProgressCounts);
+                //dtStudentProgressCounts = jicsConn.ConnectToERP(sqlProgress, ref exStudentProgressCounts);
+                dtStudentProgressCounts = spConn.ConnectToERP(sqlProgress, ref exStudentProgressCounts);
                 if (exStudentProgressCounts != null) { throw exStudentProgressCounts; }
             }
             catch (Exception ex)
