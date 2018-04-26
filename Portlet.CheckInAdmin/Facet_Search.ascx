@@ -67,6 +67,14 @@
                 <asp:ListItem Text="Off-Campus" Value="O" />
             </asp:CheckBoxList>
         </div>
+        <div class="facet">
+            <asp:Label ID="lblGradCandidacy" runat="server" CssClass="facetLabel" Text="Graduation Candidacy:" />
+            <asp:DropDownList ID="ddlGradCandidacy" runat="server" CssClass="facetOptions">
+                <asp:ListItem Text="Any" Value="" />
+                <asp:ListItem Text="Plan to graduate" Value="Y" />
+                <asp:ListItem Text="Do not plan to graduate" Value="N" />
+            </asp:DropDownList>
+        </div>
     </asp:Panel>
 </fieldset>
 
@@ -103,6 +111,12 @@
         <asp:BoundField DataField="Last Name" HeaderText="Last Name" ItemStyle-CssClass="basicInfo" />
         <asp:BoundField DataField="First Name" HeaderText="First Name" ItemStyle-CssClass="basicInfo" />
         <asp:BoundField DataField="Email" HeaderText="Email" HeaderStyle-CssClass="hide" ItemStyle-CssClass="hide" />
+        
+        <asp:BoundField DataField="Admit Year" HeaderText="Admit Year" HeaderStyle-CssClass="hide" ItemStyle-CssClass="hide" />
+        <asp:BoundField DataField="Admit Term" HeaderText="Admit Term" HeaderStyle-CssClass="hide" ItemStyle-CssClass="hide" />
+        <asp:BoundField DataField="ClassCode" HeaderText="Classification Code" HeaderStyle-CssClass="hide" ItemStyle-CssClass="hide" />
+        <asp:BoundField DataField="AcademicStanding" HeaderText="Academic Standing" HeaderStyle-CssClass="hide" ItemStyle-CssClass="hide" />
+
         <asp:BoundField DataField="Payment Options Form" HeaderText="Payment Options" />
         <asp:BoundField DataField="Financial Clearance" HeaderText="Financial Clearance" />
         <asp:BoundField DataField="Room And Board" HeaderText="Room &amp; Board" />

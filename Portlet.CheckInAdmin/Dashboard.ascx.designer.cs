@@ -49,6 +49,15 @@ namespace Portlet.CheckInAdmin {
         protected global::System.Web.UI.WebControls.LinkButton aNameSearch;
         
         /// <summary>
+        /// aRoot control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.LinkButton aRoot;
+        
+        /// <summary>
         /// contentDownloads control.
         /// </summary>
         /// <remarks>
@@ -74,6 +83,24 @@ namespace Portlet.CheckInAdmin {
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::System.Web.UI.WebControls.Button btnIncomplete;
+        
+        /// <summary>
+        /// btnUpdateSMD control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnUpdateSMD;
+        
+        /// <summary>
+        /// btnUpdateRegStat control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnUpdateRegStat;
         
         /// <summary>
         /// panelStudentProgress control.

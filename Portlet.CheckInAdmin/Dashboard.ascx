@@ -6,9 +6,10 @@
 
 <asp:Panel ID="panelNavigation" runat="server" CssClass="clear">
     <asp:LinkButton ID="aFacetSearch" runat="server" Text="Search by Student Progress" OnClick="aFacetSearch_Click" /> |
-    <asp:LinkButton ID="aNameSearch" runat="server" Text="Search by Student Name/ID" OnClick="aNameSearch_Click" />
+    <asp:LinkButton ID="aNameSearch" runat="server" Text="Search by Student Name/ID" OnClick="aNameSearch_Click" /> |
+    <asp:LinkButton ID="aRoot" runat="server" Text="Site Admin Tools" Visible="false" OnClick="aRoot_Click" />
     <common:ContentBox ID="contentDownloads" runat="server" CssClass="dashboardDownload">
-        <h4>Download Center</h4>
+        <h4>Reporting/Action Center</h4>
         <asp:GridView ID="gvIncomplete" runat="server" Visible="false" AutoGenerateColumns="false" GridLines="Both">
             <Columns>
                 <asp:BoundField DataField="HostID" HeaderText="Carthage ID" />
@@ -20,7 +21,9 @@
             </Columns>
         </asp:GridView>
         <asp:Button ID="btnIncomplete" runat="server" Text="Students with tasks remaining" OnClick="btnIncomplete_Click" />
-        <%--<asp:Button ID="btnUpdateProgress" runat="server" Text="Update Progress" OnClick="btnUpdateProgress_Click" />--%>
+
+        <asp:Button ID="btnUpdateSMD" runat="server" Text="Update Students to Check In" OnClick="btnUpdateSMD_Click" />
+        <asp:Button ID="btnUpdateRegStat" runat="server" Text="Update reg_stat" OnClick="btnUpdateRegStat_Click" />
     </common:ContentBox>
 </asp:Panel>
 

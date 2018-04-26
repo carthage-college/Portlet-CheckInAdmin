@@ -18,27 +18,27 @@ namespace Portlet.CheckInAdmin
         {
             CheckInAdminHelper ciHelper = new CheckInAdminHelper();
             PortletViewBase screen = null;
-            switch (this.CurrentPortletScreenName)
+            try
             {
-                //case "Detail_Student":
-                //    //screen = this.LoadPortletView(String.Format("Portlet.CheckInAdmin/{0}.ascx", this.CurrentPortletScreenName));
-                //    screen = this.LoadPortletView("ICS/Portlet.CheckInAdmin/Detail_Student.ascx");
-                //    break;
-                //case "Search_Student":
-                //    //screen = this.LoadPortletView(String.Format("Portlet.CheckInAdmin/{0}.ascx", this.CurrentPortletScreenName));
-                //    screen = this.LoadPortletView("ICS/Portlet.CheckInAdmin/Search_Student.ascx");
-                //    break;
-                case "Dashboard":
-                case "Facet_Search":
-                case "Detail_Student":
-                case "Search_Student":
-                    screen = this.LoadPortletView(String.Format("ICS/Portlet.CheckInAdmin/{0}.ascx", this.CurrentPortletScreenName));
-                    break;
-                default:
-                    //screen = this.LoadPortletView("ICS/Portlet.CheckInAdmin/Search_Student.ascx");
-                    screen = this.LoadPortletView("ICS/Portlet.CheckInAdmin/Dashboard.ascx");
-                    break;
+                screen = this.LoadPortletView(String.Format("ICS/Portlet.CheckInAdmin/{0}.ascx", this.CurrentPortletScreenName));
             }
+            catch (Exception ex)
+            {
+                screen = this.LoadPortletView("ICS/Portlet.CheckInAdmin/Dashboard.ascx");
+            }
+            //switch (this.CurrentPortletScreenName)
+            //{
+            //    case "Dashboard":
+            //    case "Facet_Search":
+            //    case "Detail_Student":
+            //    case "Search_Student":
+            //        screen = this.LoadPortletView(String.Format("ICS/Portlet.CheckInAdmin/{0}.ascx", this.CurrentPortletScreenName));
+            //        break;
+            //    default:
+            //        //screen = this.LoadPortletView("ICS/Portlet.CheckInAdmin/Search_Student.ascx");
+            //        screen = this.LoadPortletView("ICS/Portlet.CheckInAdmin/Dashboard.ascx");
+            //        break;
+            //}
             return screen;
         }
 
