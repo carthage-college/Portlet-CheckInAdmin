@@ -59,23 +59,29 @@ namespace Portlet.CheckInAdmin
                 this.ParentPortlet.PortletViewState[ciHelper.VIEWSTATE_SEARCH_CRITERIA] = this.txtSearch.Text;
 
                 //Use a RegEx to determine if the search criteria is a valid ID format (4-9 digits)
-                bool isID = Regex.IsMatch(this.txtSearch.Text, @"^\d{4,9}$");
+//                bool isID = Regex.IsMatch(this.txtSearch.Text, @"^\d{4,9}$");
 
-                string whereClause = isID ? String.Format("AND CAST(U.HostID AS INT) = {0}", txtSearch.Text) : String.Format("AND LOWER(U.LastName) LIKE LOWER('{0}%')", txtSearch.Text);
-                string sqlSearch = String.Format(@"
-	                SELECT
-		                U.LastName, U.FirstName, CAST(U.HostID AS INT) AS HostID, U.Email, SMD.IsCheckedIn, SMD.IsActive, SMD.FirstAccess, SMD.LastAccess, SMD.UserID, SMD.ActiveYear, SMD.ActiveSession
-	                FROM
-		                CI_StudentMetaData	SMD	INNER JOIN	FWK_User	U	ON	SMD.UserID	=	U.ID
-	                WHERE
-		                SMD.ActiveYear		=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveYear')
-	                AND
-		                SMD.ActiveSession	=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveSession')
-	                {0}
-                    ORDER BY
-                        U.LastName, U.FirstName
-                ", whereClause);
+//                string whereClause = isID ? String.Format("AND CAST(U.HostID AS INT) = {0}", txtSearch.Text) : String.Format("AND LOWER(U.LastName) LIKE LOWER('{0}%')", txtSearch.Text);
+//                string sqlSearch = String.Format(@"
+//	                SELECT
+//		                U.LastName, U.FirstName, CAST(U.HostID AS INT) AS HostID, U.Email, SMD.IsCheckedIn, SMD.IsActive, SMD.FirstAccess, SMD.LastAccess, SMD.UserID, SMD.ActiveYear, SMD.ActiveSession
+//	                FROM
+//		                CI_StudentMetaData	SMD	INNER JOIN	FWK_User	U	ON	SMD.UserID	=	U.ID
+//	                WHERE
+//		                SMD.ActiveYear		=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveYear')
+//	                AND
+//		                SMD.ActiveSession	=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveSession')
+//	                {0}
+//                    ORDER BY
+//                        U.LastName, U.FirstName
+//                ", whereClause);
+                string sqlSearch = "EXECUTE CUS_spCheckIn_AdminSearchUsers @strSearchTerm = ?";
+                List<OdbcParameter> paramSearch = new List<OdbcParameter>()
+                {
+                    new OdbcParameter("search", txtSearch.Text)
+                };
 
+                OdbcConnectionClass3 spConn = helper.CONNECTION_SP;
                 try
                 {
                     #region Original Search
@@ -108,11 +114,12 @@ namespace Portlet.CheckInAdmin
                     //}
                     #endregion
 
-                    OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
+                    //OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
                     DataTable dtSearch = null;
                     Exception exSearch = null;
 
-                    dtSearch = jicsConn.ConnectToERP(sqlSearch, ref exSearch);
+                    //dtSearch = jicsConn.ConnectToERP(sqlSearch, ref exSearch);
+                    dtSearch = spConn.ConnectToERP(sqlSearch, ref exSearch, paramSearch);
                     if (exSearch != null) { throw exSearch; }
                     if (dtSearch != null)
                     {
@@ -134,6 +141,10 @@ namespace Portlet.CheckInAdmin
                 catch (Exception ex)
                 {
                     this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("An exception occurred while filtering search results", ex));
+                }
+                finally
+                {
+                    if (spConn.IsNotClosed()) { spConn.Close(); }
                 }
             }
             else

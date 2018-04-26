@@ -18,6 +18,7 @@ using System.Configuration;
 
 using System.Text;
 using System.Globalization;
+using System.Diagnostics;
 
 namespace Portlet.CheckInAdmin
 {
@@ -264,26 +265,28 @@ namespace Portlet.CheckInAdmin
 
         public DataTable GetOfficeAndTask()
         {
-            OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
+            //OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
+            OdbcConnectionClass3 spConn = helper.CONNECTION_SP;
             DataTable dtOffice = null;
             Exception exOffice = null;
-            string sqlOffice = @"
-	            SELECT
-		            O.OfficeName, O.OfficeID, OT.TaskName, OT.TaskID, OT.ViewColumn
-	            FROM
-		            CI_OfficeTaskSession	OTS	INNER JOIN	CI_OfficeTask	OT	ON	OTS.OfficeTaskID	=	OT.TaskID
-									            INNER JOIN	CI_Office		O	ON	OT.OfficeID			=	O.OfficeID
-	            WHERE
-		            OTS.ActiveYear		=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveYear')
-	            AND
-		            OTS.ActiveSession	=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveSession')
-	            ORDER BY
-		            O.Sequence, OT.Sequence
-            ";
+//            string sqlOffice = @"
+//	            SELECT
+//		            O.OfficeName, O.OfficeID, OT.TaskName, OT.TaskID, OT.ViewColumn
+//	            FROM
+//		            CI_OfficeTaskSession	OTS	INNER JOIN	CI_OfficeTask	OT	ON	OTS.OfficeTaskID	=	OT.TaskID
+//									            INNER JOIN	CI_Office		O	ON	OT.OfficeID			=	O.OfficeID
+//	            WHERE
+//		            OTS.ActiveYear		=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveYear')
+//	            AND
+//		            OTS.ActiveSession	=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveSession')
+//	            ORDER BY
+//		            O.Sequence, OT.Sequence
+//            ";
+            string sqlOffice = "EXECUTE CUS_spCheckIn_GetOfficeAndTask";
 
             try
             {
-                dtOffice = jicsConn.ConnectToERP(sqlOffice, ref exOffice);
+                dtOffice = spConn.ConnectToERP(sqlOffice, ref exOffice);
                 if (exOffice != null) { throw exOffice; }
             }
             catch (Exception ex)
@@ -292,7 +295,7 @@ namespace Portlet.CheckInAdmin
             }
             finally
             {
-                if (jicsConn.IsNotClosed()) { jicsConn.Close(); }
+                if (spConn.IsNotClosed()) { spConn.Close(); }
             }
             return dtOffice;
         }
@@ -301,6 +304,167 @@ namespace Portlet.CheckInAdmin
         {
             DataTable dtTasks = GetTasks();
             return dtTasks.AsEnumerable().Select(task => task.Field<string>("ViewColumn")).ToList();
+        }
+
+        public string GenerateStudentMetaData()
+        {
+            Stopwatch sw = new Stopwatch();
+
+            sw.Start();
+            string debug = "";
+            string sqlStudentsFromCX = "";
+            if (helper.ACTIVE_SESSION == "RA")
+            {
+                //debug = String.Format("{0}<p>Load students for Fall</p>", debug);
+                sqlStudentsFromCX = String.Format("EXECUTE PROCEDURE ci_get_students_fall({0})", helper.ACTIVE_YEAR);
+            }
+            else if (helper.ACTIVE_SESSION == "RC")
+            {
+                //debug = String.Format("{0}<p>Load students for Spring</p>", debug);
+                sqlStudentsFromCX = String.Format("EXECUTE PROCEDURE ci_get_students_spring({0}, 'RA', {1}, 'RC')", helper.ACTIVE_YEAR - 1, helper.ACTIVE_YEAR);
+            }
+            else
+            {
+                debug = String.Format("{0}<p>Unknown term {1} for data load</p>", debug, helper.ACTIVE_SESSION);
+            }
+
+            OdbcConnectionClass3 cxSpConn = helper.CONNECTION_CX_SP;
+            DataTable dtStudentsFromCX = null;
+            List<int> listStudentsFromCX = new List<int>() { };
+            Exception exStudentsFromCX = null;
+            try
+            {
+                dtStudentsFromCX = cxSpConn.ConnectToERP(sqlStudentsFromCX, ref exStudentsFromCX);
+                if (exStudentsFromCX != null) { throw exStudentsFromCX; }
+                if (dtStudentsFromCX != null && dtStudentsFromCX.Rows.Count > 0)
+                {
+                    listStudentsFromCX = dtStudentsFromCX.AsEnumerable().Select(row => row.Field<int>("cx_id")).ToList();
+                }
+            }
+            catch (Exception ex)
+            {
+                debug = String.Format("{0}<p>Encountered a problem getting students from CX:</p><p>{1}</p>", debug, this.FormatException("", ex));
+            }
+
+            sw.Stop();
+            debug = String.Format("{0}<p>Time for getting {1} students from CX: {2}</p>", debug, listStudentsFromCX.Count, sw.Elapsed.ToString());
+            sw.Reset();
+
+            sw.Start();
+            OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
+            DataTable dtStudentsFromJICS = null;
+            Exception exStudentsFromJICS = null;
+            string sqlStudentsFromJICS = String.Format("SELECT CAST(FU.HostID AS INT) AS HostID, SMD.IsActive FROM CI_StudentMetaData SMD INNER JOIN FWK_User FU ON SMD.UserID = FU.ID WHERE ActiveYear = {0} AND ActiveSession = '{1}'", helper.ACTIVE_YEAR, helper.ACTIVE_SESSION);
+            try
+            {
+                dtStudentsFromJICS = jicsConn.ConnectToERP(sqlStudentsFromJICS, ref exStudentsFromJICS);
+                if (exStudentsFromJICS != null) { throw exStudentsFromJICS; }
+            }
+            catch (Exception ex)
+            {
+                debug = String.Format("{0}<p>Encountered problem getting students from JICS:</p><p>{1}</p>", debug, this.FormatException("", ex));
+            }
+
+            //Initialize lists
+            List<int> disableJICS = new List<int>() { }, enableJICS = new List<int>() { }, createJICS = new List<int>() { };
+
+            //Identify which records need to be changed (created, enabled, or disabled)
+            try
+            {
+                //Flip IsActive from 1 to 0
+                disableJICS = dtStudentsFromJICS.AsEnumerable().Where(row => row.Field<bool>("IsActive") == true && !listStudentsFromCX.Contains(row.Field<int>("HostID"))).Select(row => row.Field<int>("HostID")).ToList();
+
+                //Flip IsActive from 0 to 1
+                enableJICS = dtStudentsFromJICS.AsEnumerable().Where(row => row.Field<bool>("IsActive") == false && listStudentsFromCX.Contains(row.Field<int>("HostID"))).Select(row => row.Field<int>("HostID")).ToList();
+
+                //Create StudentMetaData record
+                createJICS = listStudentsFromCX.Where(list => !dtStudentsFromJICS.AsEnumerable().Select(row => row.Field<int>("HostID")).Contains(list)).ToList();
+
+                debug = String.Format("{0}<p>Enable {1} records<br />Disable {2} records<br />Create {3} records</p>", debug, enableJICS.Count, disableJICS.Count, createJICS.Count);
+            }
+            catch (Exception ex)
+            {
+                //debug = String.Format("{0}<p>Encountered problem while determining presence or absence of StudentMetaData:</p><p>{1}</p>", debug, ciHelper.FormatException("", ex));
+            }
+            sw.Stop();
+
+            debug = String.Format("{0}<p>Time to assemble lists: {1}</p>", debug, sw.Elapsed.ToString());
+            sw.Reset();
+
+            OdbcConnectionClass3 jicsSpConn = helper.CONNECTION_SP;
+            Exception exSP = null;
+            string sqlSP = "";
+
+            #region Disable Student Meta Data
+
+            sw.Start();
+            foreach (int cxID in disableJICS)
+            {
+                try
+                {
+                    sqlSP = String.Format("EXECUTE CUS_spCheckIn_DisableStudentMetaData @intHostID = {0}", cxID);
+                    jicsSpConn.ConnectToERP(sqlSP, ref exSP);
+                    if (exSP != null) { throw exSP; }
+                }
+                catch (Exception ex)
+                {
+                    debug = String.Format("{0}<p>Error executing disable: {1}<br />{2}</p>", debug, sqlSP, this.FormatException("", ex));
+                }
+            }
+
+            sw.Stop();
+            debug = String.Format("{0}<p>Time to process disable list ({1}): {2}</p>", debug, disableJICS.Count, sw.Elapsed.ToString());
+            sw.Reset();
+
+            #endregion
+
+            #region Enable/Create Student Meta Data
+
+            sw.Start();
+            List<int> combinedIDs = enableJICS.Union(createJICS).ToList();
+            foreach (int cxID in combinedIDs)
+            {
+                try
+                {
+                    sqlSP = String.Format("EXECUTE CUS_spCheckIn_InsertUpdateStudentMetaData @intHostID = {0}", cxID);
+                    jicsSpConn.ConnectToERP(sqlSP, ref exSP);
+                    if (exSP != null) { throw exSP; }
+                }
+                catch (Exception ex)
+                {
+                    debug = String.Format("{0}<p>Error executing insert/update: {1}<br />{2}</p>", debug, sqlSP, this.FormatException("", ex));
+                }
+            }
+            sw.Stop();
+            debug = String.Format("{0}<p>Time to process create/update ({1}): {2}</p>", debug, combinedIDs.Count, sw.Elapsed.ToString());
+            sw.Reset();
+
+            #endregion
+
+            #region Initialize Student Progress
+
+            sw.Start();
+            try
+            {
+                jicsSpConn.ConnectToERP("EXECUTE CUS_spCheckIn_InitializeStudentProgress", ref exSP);
+                if (exSP != null) { throw exSP; }
+            }
+            catch (Exception ex)
+            {
+                debug = String.Format("{0}<p>Error when initializing student progress</p>", debug);
+            }
+            finally
+            {
+                sw.Stop();
+                debug = String.Format("{0}<p>Time to process student progress initialization: {1}</p>", debug, sw.Elapsed.ToString());
+                sw.Reset();
+            }
+
+            #endregion
+
+            if (jicsSpConn.IsNotClosed()) { jicsSpConn.Close(); }
+
+            return debug;
         }
 
         [Obsolete]
@@ -485,29 +649,29 @@ namespace Portlet.CheckInAdmin
         [Obsolete]
         public DataTable GetStudentProgress()
         {
-            OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
             DataTable dtSP = null;
-            Exception exSP = null;
-            string sqlSP = "SELECT CAST(U.HostID AS INT) AS HostID, OT.ViewColumn, SP.* FROM FWK_User U INNER JOIN CI_StudentProgress SP ON U.ID = SP.UserID INNER JOIN CI_OfficeTask OT ON SP.TaskID = OT.TaskID WHERE SP.Yr = ? AND SP.Sess = ? AND HostID IS NOT NULL";
-            List<OdbcParameter> paramSP = new List<OdbcParameter>()
-            {
-                  new OdbcParameter("year", helper.ACTIVE_YEAR)
-                , new OdbcParameter("session", helper.ACTIVE_SESSION)
-            };
+            //Exception exSP = null;
+            //string sqlSP = "SELECT CAST(U.HostID AS INT) AS HostID, OT.ViewColumn, SP.* FROM FWK_User U INNER JOIN CI_StudentProgress SP ON U.ID = SP.UserID INNER JOIN CI_OfficeTask OT ON SP.TaskID = OT.TaskID WHERE SP.Yr = ? AND SP.Sess = ? AND HostID IS NOT NULL";
+            //List<OdbcParameter> paramSP = new List<OdbcParameter>()
+            //{
+            //      new OdbcParameter("year", helper.ACTIVE_YEAR)
+            //    , new OdbcParameter("session", helper.ACTIVE_SESSION)
+            //};
 
-            try
-            {
-                dtSP = jicsConn.ConnectToERP(sqlSP, ref exSP, paramSP);
-                if (exSP != null) { throw exSP; }
-            }
-            catch (Exception ex)
-            {
-                FormatException("Unable to retrieve student progress from ICS_NET", ex, null, true);
-            }
-            finally
-            {
-                if (jicsConn.IsNotClosed()) { jicsConn.Close(); }
-            }
+            //OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
+            //try
+            //{
+            //    dtSP = jicsConn.ConnectToERP(sqlSP, ref exSP, paramSP);
+            //    if (exSP != null) { throw exSP; }
+            //}
+            //catch (Exception ex)
+            //{
+            //    FormatException("Unable to retrieve student progress from ICS_NET", ex, null, true);
+            //}
+            //finally
+            //{
+            //    if (jicsConn.IsNotClosed()) { jicsConn.Close(); }
+            //}
             return dtSP;
         }
 
@@ -675,34 +839,6 @@ namespace Portlet.CheckInAdmin
         }
 
         #endregion
-
-        public void UpdatePortalFromCX()
-        {
-            DataTable dtCX = GetCXView();
-            DataTable dtJICS = GetStudentProgress();
-
-            string debug = "";
-
-            List<string> taskList = GetTaskViewColumns();
-            foreach (string task in taskList)
-            {
-                List<int> jicsStudentsCompletedTask = dtJICS.AsEnumerable().Where(stu => stu.Field<string>("ViewColumn") == task && stu.Field<string>("TaskStatus") == CheckInTaskStatus.Yes.ToDescriptionString()).Select(stu => stu.Field<int>("HostID")).ToList();
-                List<int> cxStudentsCompletedTask = dtCX.AsEnumerable().Where(stu => stu.Field<string>(task) == CheckInTaskStatus.Yes.ToDescriptionString() && !jicsStudentsCompletedTask.Contains(stu.Field<int>("id"))).Select(stu => stu.Field<int>("id")).ToList();
-
-                //foreach (int cxID in cxStudentsCompletedTask)
-                //{
-                //    helper.completeTask(task, cxID.ToString(), CarthageSystem.CX);
-                //}
-
-                debug = String.Format("{0}<p>Complete {1} task(s) for {2}</p>", debug, cxStudentsCompletedTask.Count.ToString(), task);
-
-                List<int> jicsStudentsWaiveTask = dtJICS.AsEnumerable().Where(stu => stu.Field<string>("ViewColumn") == task && stu.Field<string>("TaskStatus") == CheckInTaskStatus.Waived.ToDescriptionString()).Select(stu => stu.Field<int>("HostID")).ToList();
-                List<int> cxStudentsWaiveTask = dtCX.AsEnumerable().Where(stu => stu.Field<string>(task) == CheckInTaskStatus.Waived.ToDescriptionString() && !jicsStudentsWaiveTask.Contains(stu.Field<int>("id"))).Select(stu => stu.Field<int>("id")).ToList();
-
-                debug = String.Format("{0}<p>Waive {1} task(s) for {2}</p>", debug, cxStudentsWaiveTask.Count.ToString(), task);
-            }
-            //helper.EmailAdmin(debug);
-        }
     }
 
     public class Task

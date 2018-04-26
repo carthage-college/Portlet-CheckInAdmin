@@ -127,18 +127,6 @@ namespace Portlet.CheckInAdmin
         {
         }
 
-        /// <summary>
-        /// Load the DataTable with the list of DataRows
-        /// </summary>
-        /// <param name="dt">The DataTable with the initial batch of search results</param>
-        /// <param name="drList">Collection of DataRow objects which make up the new dataset</param>
-        [Obsolete]
-        private void UpdateDataTable(ref DataTable dt, List<DataRow> drList)
-        {
-            if (drList.Count == 0) { dt.Rows.Clear(); }
-            else { dt = drList.CopyToDataTable(); }
-        }
-
         #region Row and Control creation
 
         private TableRow OfficeRow(string officeName, string officeID)
@@ -201,7 +189,6 @@ namespace Portlet.CheckInAdmin
 
         private RadioButton BuildTaskRadio(string taskName, string officeID, string status, string viewColumn)
         {
-            //string taskNoSpace = taskName.Replace(" ", "");
             return BuildRadio("radioTask", String.Format("Task{0}", viewColumn), "task", officeID, status);
         }
 
@@ -304,46 +291,6 @@ namespace Portlet.CheckInAdmin
             Response.End();
         }
 
-        [Obsolete]
-        protected void btnExportExcel_old_Click(object sender, EventArgs e)
-        {
-            Response.Clear();
-            Response.Buffer = true;
-            Response.AddHeader("content-disposition", "attachment;filename=CheckInExport.xls");
-            Response.Charset = "";
-            Response.ContentType = "application/vnd.ms-excel";
-
-            using (StringWriter sw = new StringWriter())
-            {
-                HtmlTextWriter hw = new HtmlTextWriter(sw);
-
-                /****************************************************************************
-                 * Ordinarily, this control would be written using the RenderControl() method
-                 * but because all JICS portlets exist as .ascx files, we do not have access
-                 * to the <form> tag which causes an exception to be thrown. The simplest
-                 * solution to circumvent the exception is outlined in this article:
-                 * http://stackoverflow.com/questions/6343630/gridview-must-be-placed-inside-a-form-tag-with-runat-server-even-after-the-gri
-                 * 
-                 * Essentially, the control is explicitly rendered step-by-step. Another option
-                 * is to remove the GridView from the page's controls collection while performing
-                 * the rendering and then re-adding it before the page loads. This approach was
-                 * deemed more straightforward.
-                *****************************************************************************/
-                dgResults.RenderBeginTag(hw);
-                dgResults.HeaderRow.RenderControl(hw);
-                foreach (GridViewRow row in dgResults.Rows)
-                {
-                    row.RenderControl(hw);
-                }
-                dgResults.FooterRow.RenderControl(hw);
-                dgResults.RenderEndTag(hw);
-
-                Response.Output.Write(sw.ToString());
-                Response.Flush();
-                Response.End();
-            }
-        }
-
         protected void aNameSearch_Click(object sender, EventArgs e)
         {
             this.ParentPortlet.NextScreen("Search_Student");
@@ -351,13 +298,20 @@ namespace Portlet.CheckInAdmin
 
         protected void btnSearch_Click(object sender, EventArgs e)
         {
-            DataTable dtResults = GetSearchResults();
-            this.dgResults.DataSource = dtResults;
-            this.dgResults.DataBind();
+            try
+            {
+                DataTable dtResults = GetSearchResults();
+                this.dgResults.DataSource = dtResults;
+                this.dgResults.DataBind();
 
-            //Update the recordcount
-            this.panelResultCount.Visible = this.btnExportExcel.Visible = true;
-            this.ltlResultCount.Text = dtResults.Rows.Count.ToString();
+                //Update the recordcount
+                this.panelResultCount.Visible = this.btnExportExcel.Visible = true;
+                this.ltlResultCount.Text = dtResults.Rows.Count.ToString();
+            }
+            catch (Exception ex)
+            {
+                ciHelper.FormatException("Error while retrieving faceted search results in button click event", ex, null, true);
+            }
         }
 
         #endregion
@@ -365,7 +319,7 @@ namespace Portlet.CheckInAdmin
         protected DataTable GetSearchResults()
         {
             OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
-            DataTable dtResults = null;
+            DataTable dtResults = new DataTable();
             Exception exResults = null;
 
             #region Dynamically build search SQL
@@ -419,20 +373,23 @@ namespace Portlet.CheckInAdmin
 
             string sqlResults = String.Format(@"
                 SELECT
-                    CAST(CAST(U.HostID AS INT) AS VARCHAR(10)) AS HostID, U.LastName AS 'Last Name', U.FirstName AS 'First Name', U.Email, '' AS Standing, '' AS Athlete, '' AS Residency {0}
+                    CAST(CAST(U.HostID AS INT) AS VARCHAR(10)) AS HostID, U.LastName AS 'Last Name', U.FirstName AS 'First Name', U.Email,
+                    '' AS 'Admit Year', '' AS 'Admit Term', '' AS ClassCode, '' AS AcademicStanding{0}
                 FROM
                     CI_StudentMetaData  SMD INNER JOIN  FWK_User    U   ON  SMD.UserID  =   U.ID
                                             {1}
                 WHERE
-                    SMD.ActiveYear      =   (SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveYear')
+                    SMD.ActiveYear      =   {3}
                 AND
-                    SMD.ActiveSession   =   (SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveSession')
+                    SMD.ActiveSession   =   '{4}'
                 AND
                     SMD.IsActive        =   1
                 {2}
                 ORDER BY
                     U.LastName, U.FirstName, U.Email
-            ", sqlSelect, sqlFrom, sqlWhere);
+            ", sqlSelect, sqlFrom, sqlWhere, helper.ACTIVE_YEAR, helper.ACTIVE_SESSION);
+
+            this.ParentPortlet.ShowFeedback(FeedbackType.Message, sqlResults);
 
             try
             {
@@ -578,6 +535,96 @@ namespace Portlet.CheckInAdmin
 
                 #endregion
 
+                #region Faceted Search - Grad Candidacy
+
+                if (!String.IsNullOrWhiteSpace(this.ddlGradCandidacy.SelectedValue))
+                {
+                    OdbcConnectionClass3 cxConn = helper.CONNECTION_CX;
+                    DataTable dtGrad = null;
+                    Exception exGrad = null;
+
+                    try
+                    {
+                        string sqlGrad = String.Format("SELECT student_id FROM cc_stg_undergrad_candidacy WHERE datecreated >= TO_DATE('{0}', '%Y-%m-%d')", helper.START_DATE);
+
+                        dtGrad = cxConn.ConnectToERP(sqlGrad, ref exGrad);
+                        if (exGrad != null) { throw exGrad; }
+                        if (dtGrad != null && dtGrad.Rows.Count > 0)
+                        {
+                            //The "student_id" field coming back from CX is an int so it needs to be re-cast as a string for the LINQ comparisons below
+                            List<string> gradIDs = dtGrad.AsEnumerable().Select(grad => grad.Field<int>("student_id").ToString()).ToList();
+                            
+                            //Generally "filteredRows" would be of type "var" but because it is initialized with null and used in one of the two branches, a data type must be specified
+                            EnumerableRowCollection<DataRow> filteredRows = null;
+                            if(this.ddlGradCandidacy.SelectedValue == "Y")
+                            {
+                                filteredRows = from row in dtResults.AsEnumerable()
+                                               where gradIDs.Contains(row.Field<string>("HostID"))
+                                               select row;
+                            }
+                            else
+                            {
+                                filteredRows = from row in dtResults.AsEnumerable()
+                                               where !gradIDs.Contains(row.Field<string>("HostID"))
+                                               select row;
+                            }
+                            dtResults = filteredRows == null || filteredRows.Count() == 0 ? new DataTable() : filteredRows.CopyToDataTable();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error while filtering search on graduation candidacy.", ex, null, true));
+                    }
+                    finally
+                    {
+                        if (cxConn.IsNotClosed()) { cxConn.Close(); }
+                    }
+                }
+
+                #endregion
+
+                #region Include Additional Fields
+
+                if (dtResults != null && dtResults.Rows.Count > 0)
+                {
+                    //Loop through all rows in the recordset. Processing occurs at this point because the recordset is in its smallest state since all filtering has been completed.
+                    for (int ii = 0; ii < dtResults.Rows.Count; ii++)
+                    {
+                        //Establish database connection
+                        OdbcConnectionClass3 cxSpConn = helper.CONNECTION_CX;
+
+                        //Initialize query variables
+                        DataTable dtPER = null;
+                        Exception exPER = null;
+
+                        string sqlPER = String.Format(@"SELECT adm_sess, adm_yr, cl, TRIM(ASR.txt) AS acad_stat FROM prog_enr_rec PER LEFT JOIN acad_stat_table ASR ON PER.acst = ASR.acst WHERE id = {0} AND subprog = 'TRAD'",
+                            dtResults.Rows[ii]["HostID"].ToString());
+                        try
+                        {
+                            dtPER = cxSpConn.ConnectToERP(sqlPER, ref exPER);
+                            if (exPER != null) { throw exPER; }
+                            if (dtPER != null && dtPER.Rows.Count > 0)
+                            {
+                                DataRow dr = dtPER.Rows[0];
+                                dtResults.Rows[ii]["Admit Year"] = dr["adm_yr"].ToString();
+                                dtResults.Rows[ii]["Admit Term"] = dr["adm_sess"].ToString();
+                                dtResults.Rows[ii]["ClassCode"] = dr["cl"].ToString();
+                                dtResults.Rows[ii]["AcademicStanding"] = dr["acad_stat"].ToString();
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            ciHelper.FormatException("Could not load program enrollment data in faceted search.", ex);
+                        }
+                        finally
+                        {
+                            //Always close database connection
+                            if (cxSpConn.IsNotClosed()) { cxSpConn.Close(); }
+                        }
+                    }
+                }
+
+                #endregion
                 ////////////////////////////////////////////////////////////////////
             }
             catch (Exception ex)
@@ -589,102 +636,6 @@ namespace Portlet.CheckInAdmin
                 if (jicsConn.IsNotClosed()) { jicsConn.Close(); }
             }
             return dtResults;
-        }
-
-        [Obsolete]
-        protected void btnSearch_old_Click(object sender, EventArgs e)
-        {
-            DataTable dtCX = ciHelper.GetCXView();
-            DataTable dtJICS = ciHelper.GetStudentProgress();
-
-            DataTable dtResults = ciHelper.GetMergedView();
-
-            OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
-            string sqlSearch = "";
-
-            try
-            {
-                //List<string> standing = cblStanding.Items.Cast<ListItem>().Where(li => li.Selected).Select(li => li.Value).ToList();
-                //if (standing.Count > 0)
-                //{
-                //    List<DataRow> results = dtResults.AsEnumerable().Where(row => standing.Contains(row.Field<string>("isfreshmantransfer"))).ToList();
-                //    UpdateDataTable(ref dtResults, results);
-                //}
-
-                //List<string> athlete = cblAthlete.Items.Cast<ListItem>().Where(li => li.Selected).Select(li => li.Value).ToList();
-                //if (athlete.Count > 0)
-                //{
-                //    List<DataRow> results = dtResults.AsEnumerable().Where(row => athlete.Contains(row.Field<string>("is_athlete"))).ToList();
-                //    UpdateDataTable(ref dtResults, results);
-                //}
-
-                List<string> residency = cblResidency.Items.Cast<ListItem>().Where(li => li.Selected).Select(li => li.Value).ToList();
-                if (residency.Count > 0)
-                {
-                    List<DataRow> results = dtResults.AsEnumerable().Where(row => residency.Contains(row.Field<string>("resident_commuter"))).ToList();
-                    UpdateDataTable(ref dtResults, results);
-                }
-
-                sqlSearch = String.Format("Current result count = {0}; cx {1}; jics {2}<br /><br />", dtResults == null ? "null" : dtResults.Rows.Count.ToString(), dtCX == null ? "null" : dtCX.Rows.Count.ToString(), dtJICS == null ? "null" : dtJICS.Rows.Count.ToString());
-
-                try
-                {
-                    DataTable dtTasks = ciHelper.GetTasks();
-                    List<string> viewColumns = dtTasks.AsEnumerable().Select(task => task.Field<string>("ViewColumn")).ToList();
-
-                    foreach (string viewColumn in viewColumns)
-                    {
-                        List<RadioButton> radios = GetRadioGroup(this.tblOffices, String.Format("Task{0}", viewColumn));
-                        //sqlSearch = String.Format("{0}<br />Found {1} radio buttons for {2}", sqlSearch, radios.Count, viewColumn);
-                        RadioButton selectedRadio = radios.AsEnumerable().FirstOrDefault(rb => rb.Checked == true && !rb.ID.EndsWith("*")) ?? new RadioButton();
-
-                        if (radios.Contains(selectedRadio))
-                        {
-                            //sqlSearch = String.Format("{0}<br />Value of matched radio for {1} is {2}", sqlSearch, viewColumn, selectedRadio.ID.Substring(selectedRadio.ID.Length - 1, 1));
-
-                            //The task status: Y, N, W, or P
-                            //string status = selectedRadio.ID.Substring(selectedRadio.ID.Length - 1, 1);
-                            string[] status = selectedRadio.ID.Split('_');
-                            List<string> listStatus = status.Last().Select(chr => chr.ToString()).ToList();
-                            
-                            
-
-                            //The column name in the view (see CI_OfficeTask.ViewColumn)
-                            //string col = selectedRadio.ID.Substring(0, selectedRadio.ID.Length - 1).Replace("radioTask", "");
-                            string col = selectedRadio.ID.Replace("radioTask", "").Replace(String.Format("_{0}", status.Last()), "");
-
-                            //Filter the results of the query based on the task and status of the checked element
-                            //List<DataRow> results = dtResults.AsEnumerable().Where(row => row.Field<string>(col) == status).ToList();
-                            List<DataRow> results = dtResults.AsEnumerable().Where(row => listStatus.Contains(row.Field<string>(col))).ToList();
-
-                            //Update the datatable with the filtered results of the facet
-                            UpdateDataTable(ref dtResults, results);
-
-                            //If the filtering results in no rows remaining, break out of the loop to avoid continued searching against an empty recordset
-                            if (dtResults == null || dtResults.Rows.Count == 0) { break; }
-                        }
-                    }
-
-                    //Load the results into the GridView
-                    this.dgResults.DataSource = dtResults;
-                    this.dgResults.DataBind();
-
-                    //Update the recordcount
-                    this.panelResultCount.Visible = this.btnExportExcel.Visible = true;
-                    this.ltlResultCount.Text = dtResults.Rows.Count.ToString();
-
-                    //this.ParentPortlet.ShowFeedback(FeedbackType.Message, String.Format("SELECT ID, CAST(HostID AS INT) AS CXID, FirstName, LastName FROM FWK_User WHERE 1 = 1 {0} ORDER BY LastName, FirstName", sqlSearch));
-                    //this.ParentPortlet.ShowFeedback(FeedbackType.Message, sqlSearch);
-                }
-                catch (Exception ex)
-                {
-                    this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("An error occurred while building the search string", ex));
-                }
-            }
-            catch (Exception ex)
-            {
-                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("An error occurred while processing search criteria", ex, null, true));
-            }
         }
     }
 }

@@ -20,6 +20,8 @@ using System.Drawing;
 using System.Data.SqlClient;
 using System.Configuration;
 
+using System.Diagnostics;
+
 
 namespace Portlet.CheckInAdmin
 {
@@ -30,23 +32,27 @@ namespace Portlet.CheckInAdmin
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            string stopwatch = "";
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
             LoadStudentProgress();
+            sw.Stop();
 
+            stopwatch = String.Format("<p>Load student progress: {0}</p>", sw.Elapsed.ToString());
+
+            sw.Reset();
+            sw.Start();
             LoadStudentActivity();
+            sw.Stop();
+
+            stopwatch = String.Format("{0}<p>Load student activity: {1}</p>", stopwatch, sw.Elapsed.ToString());
+
+            this.ParentPortlet.ShowFeedback(FeedbackType.Message, stopwatch);
+
+            this.aRoot.Visible = PortalUser.Current.IsSiteAdmin;
         }
 
         #region Data Loading
-
-        /// <summary>
-        /// Load the DataTable with the list of DataRows
-        /// </summary>
-        /// <param name="dt">The DataTable with the initial batch of search results</param>
-        /// <param name="drList">Collection of DataRow objects which make up the new dataset</param>
-        private void UpdateDataTable(ref DataTable dt, List<DataRow> drList)
-        {
-            if (drList.Count == 0) { dt.Rows.Clear(); }
-            else { dt = drList.CopyToDataTable(); }
-        }
 
         private void LoadStudentProgress()
         {
@@ -70,38 +76,10 @@ namespace Portlet.CheckInAdmin
             #endregion
 
             #region Faster Progress Count
-            OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
+            //OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
             OdbcConnectionClass3 spConn = helper.CONNECTION_SP;
             DataTable dtStudentProgressCounts = null;
             Exception exStudentProgressCounts = null;
-
-            #region Commented out
-            //            string sqlProgress = @"
-//                SELECT
-//	                SUM(CASE Summary.IsComplete WHEN 'Y' THEN 1 ELSE 0 END) AS Complete,
-//	                SUM(CASE Summary.IsMissing1 WHEN 'Y' THEN 1 ELSE 0 END) AS Missing1,
-//	                SUM(CASE Summary.[Started] WHEN 'Y' THEN 1 ELSE 0 END) AS [Started],
-//                    -1 AS NotStarted
-//                FROM
-//	                (
-//		                SELECT
-//			                UserID, COUNT(*) AS Complete,
-//			                CASE WHEN COUNT(*) = (SELECT COUNT(*) FROM CI_OfficeTask) THEN 'Y' ELSE 'N' END AS IsComplete,
-//			                CASE WHEN COUNT(*) = (SELECT COUNT(*) FROM CI_OfficeTask) - 1 THEN 'Y' ELSE 'N' END AS IsMissing1,
-//			                CASE WHEN COUNT(*) < (SELECT COUNT(*) FROM CI_OfficeTask) - 1 THEN 'Y' ELSE 'N' END AS 'Started'
-//		                FROM
-//			                CI_StudentProgress	SP
-//		                WHERE
-//			                SP.TaskStatus	IN	('Y','W')
-//		                AND
-//			                SP.Yr	=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveYear')
-//		                AND
-//			                SP.Sess	=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveSession')
-//		                GROUP BY
-//			                UserID
-//	                )	Summary
-            //            ";
-            #endregion
 
             string sqlProgress = @"EXECUTE CUS_spCheckIn_GetStudentProgressSummary";
             
@@ -117,7 +95,7 @@ namespace Portlet.CheckInAdmin
             }
             finally
             {
-                if (jicsConn.IsNotClosed()) { jicsConn.Close(); }
+                if (spConn.IsNotClosed()) { spConn.Close(); }
             }
 
             #region Commented out
@@ -244,55 +222,15 @@ namespace Portlet.CheckInAdmin
 
         private void LoadStudentActivity()
         {
-            OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
+            //OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
+            OdbcConnectionClass3 spConn = helper.CONNECTION_SP;
 
             DataTable dtStudentActivity = null;
             Exception exStudentActivity = null;
 
-            #region Commented out
-            //            string sqlStudentActivity = String.Format(@"
-//                SELECT
-//                    SUBSTRING(CONVERT(VARCHAR(10), HT.minTime, 7),1, 6) AS DateLabel, DATEPART(DAYOFYEAR, HT.minTime) AS Sequence, COUNT(SP.ProgressID) AS Completed
-//                FROM
-//                    (
-//                        SELECT
-//                            DATEADD(DAY, n, DATEADD(DAY, DATEDIFF(DAY, 0, (SELECT CAST(MIN(CompletedOn) AS DATE) FROM CI_StudentProgress)), 0)) AS minTime
-//                        FROM (
-//                            SELECT TOP ((DATEDIFF(DAY, (SELECT CAST(MIN(CompletedOn) AS DATE) FROM CI_StudentProgress), (SELECT CAST(MAX(CompletedOn) AS DATE) FROM CI_StudentProgress)) + 1))
-//                                n = ROW_NUMBER() OVER (ORDER BY [object_id]) - 1
-//                            FROM sys.all_objects ORDER BY [object_id]
-//                        ) dayTable
-//                    ) AS HT    LEFT JOIN    CI_StudentProgress    SP    ON    HT.minTime                        <    SP.CompletedOn
-//                                                                AND    DATEADD(DAY, 1, HT.minTime)        >    SP.CompletedOn
-//                WHERE
-//                    ISNULL(SP.TaskStatus,'Y') = 'Y'
-//                GROUP BY
-//                    SUBSTRING(CONVERT(VARCHAR(10), HT.minTime, 7),1, 6), DATEPART(DAYOFYEAR, HT.minTime)
-//                ORDER BY
-//                    Sequence
-            //            ");
-            #endregion
+            string sqlStudentActivity = "EXECUTE CUS_spCheckIn_AdminStudentActivity";
 
-            string sqlStudentActivity = String.Format(@"
-	            SELECT
-		            CONVERT(CHAR(8), SP.CompletedOn, 112) AS DateOrder, SUBSTRING(CONVERT(VARCHAR(8), SP.CompletedOn, 1), 1, 5) AS DateLabel, COUNT(*) AS Completed
-	            FROM
-		            CI_StudentProgress	SP
-	            WHERE
-		            SP.Yr	=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveYear')
-	            AND
-		            SP.Sess	=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveSession')
-	            AND
-		            SP.TaskStatus	=	'Y'
-				AND
-					SP.CompletedOn	>=	'2017-12-11'
-	            GROUP BY
-		            CONVERT(CHAR(8), SP.CompletedOn, 112), SUBSTRING(CONVERT(VARCHAR(8), SP.CompletedOn, 1), 1, 5)
-	            ORDER BY
-		            DateOrder
-            ");
-
-            #region 4 hour block logic
+            #region Obsolete - 4 hour block logic
             /* 4-hour blocks */
             //            string sqlStudentActivity = String.Format(@"
             //                SELECT
@@ -352,7 +290,8 @@ namespace Portlet.CheckInAdmin
 
             try
             {
-                dtStudentActivity = jicsConn.ConnectToERP(sqlStudentActivity, ref exStudentActivity);
+                //dtStudentActivity = jicsConn.ConnectToERP(sqlStudentActivity, ref exStudentActivity);
+                dtStudentActivity = spConn.ConnectToERP(sqlStudentActivity, ref exStudentActivity);
                 if (exStudentActivity != null) { throw exStudentActivity; }
                 chartStudentActivity.DataSource = dtStudentActivity;
                 chartStudentActivity.DataBind();
@@ -363,7 +302,7 @@ namespace Portlet.CheckInAdmin
             }
             finally
             {
-                if (jicsConn.IsNotClosed()) { jicsConn.Close(); }
+                if (spConn.IsNotClosed()) { spConn.Close(); }
             }
 
             this.shStudentActivity.Text = String.Format("Student Activity for {0} {1}", helper.ACTIVE_SESSION_TEXT, helper.ACTIVE_YEAR);
@@ -398,12 +337,14 @@ namespace Portlet.CheckInAdmin
 
             #region Initialize JICS variables
             //Initialize variables for JICS query
-            OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
+            //OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
+            OdbcConnectionClass3 spConn = helper.CONNECTION_SP;
             DataTable dtJICSStudents = null;
             Exception exJICSStudents = null;
-            string sqlJICSStudents = String.Format(@"
-                SELECT CAST(HostID AS INT) AS HostID FROM FWK_User U INNER JOIN CI_StudentProgress SP ON U.ID = SP.UserID WHERE TaskStatus <> 'N' AND HostID IS NOT NULL GROUP BY HostID
-            ");
+//            string sqlJICSStudents = String.Format(@"
+//                SELECT CAST(HostID AS INT) AS HostID FROM FWK_User U INNER JOIN CI_StudentProgress SP ON U.ID = SP.UserID WHERE TaskStatus <> 'N' AND HostID IS NOT NULL GROUP BY HostID
+//            ");
+            string sqlJICSStudents = "EXECUTE CUS_spCheckIn_AdminStudentsWithCompletedTask";
             #endregion
 
             try
@@ -420,7 +361,7 @@ namespace Portlet.CheckInAdmin
                     try
                     {
                         //Get all students who have completed (or had waived) at least one check-in task
-                        dtJICSStudents = jicsConn.ConnectToERP(sqlJICSStudents, ref exJICSStudents);
+                        dtJICSStudents = spConn.ConnectToERP(sqlJICSStudents, ref exJICSStudents);
                         
                         //If the attempt at retrieving all students who have finished something in check-in fails, throw an error
                         if (exJICSStudents != null) { throw exJICSStudents; }
@@ -442,7 +383,7 @@ namespace Portlet.CheckInAdmin
                     finally
                     {
                         //Always close your database connections
-                        if (jicsConn.IsNotClosed()) { jicsConn.Close(); }
+                        if (spConn.IsNotClosed()) { spConn.Close(); }
                     }
                 }
             }
@@ -472,82 +413,96 @@ namespace Portlet.CheckInAdmin
             this.ParentPortlet.ChangeScreen("Search_Student");
         }
 
-        #endregion
+        protected void btnUpdateSMD_Click(object sender, EventArgs e)
+        {
+            string feedback = ciHelper.GenerateStudentMetaData();
+            this.ParentPortlet.ShowFeedback(FeedbackType.Message, feedback);
+        }
+
+        protected void btnUpdateRegStat_Click(object sender, EventArgs e)
+        {
+            string feedback = "<p>Begin processing reg_stat information</p>";
+            OdbcConnectionClass3 jicsSpConn = helper.CONNECTION_SP;
+            DataTable dtIncomplete = null;
+            Exception exIncomplete = null;
+            int recordsCompleted = 0;
+            try
+            {
+                //Get every incomplete task for every active student
+                string sqlIncomplete = String.Format("EXECUTE CUS_spCheckIn_GetIncompleteTasks");
+                dtIncomplete = jicsSpConn.ConnectToERP(sqlIncomplete, ref exIncomplete);
+                if (exIncomplete != null) { throw exIncomplete; }
+
+                if (dtIncomplete != null && dtIncomplete.Rows.Count > 0)
+                {
+                    //For each task, execute the appropriate CX stored procedure to determine if it has been completed outside the check-in process
+                    foreach (DataRow dr in dtIncomplete.Rows)
+                    {
+                        CheckInTaskStatus result = helper.updatePortalTaskStatusFromCX(dr["ViewColumn"].ToString(), dr["UserID"].ToString());
+                        if (result == CheckInTaskStatus.Yes) { recordsCompleted++; }
+                    }
+                    feedback = String.Format("{0}<p>{1} incomplete tasks found; {2} were resolved.</p>", feedback, dtIncomplete.Rows.Count, recordsCompleted);
+
+                    //Once the task statuses are current, run the process to update the "CompletedOn" field in CI_StudentMetaData and return the affected records so the CX updates can be made
+                    DataTable dtComplete = null;
+                    Exception exComplete = null;
+                    string sqlComplete = "EXECUTE CUS_spCheckIn_AdminProcessCompleted";
+                    try
+                    {
+                        dtComplete = jicsSpConn.ConnectToERP(sqlComplete, ref exComplete);
+                        if (exComplete != null) { throw exComplete; }
+                        if (dtComplete != null && dtComplete.Rows.Count > 0)
+                        {
+                            feedback = String.Format("{0}<p>Preparing to update reg_stat for {1} record(s)</p>", feedback, dtComplete.Rows.Count);
+                            OdbcConnectionClass3 cxSpConn = helper.CONNECTION_CX_SP;
+                            int updateCount = 0;
+                            string debugFailedID = "";
+                            foreach (DataRow drComplete in dtComplete.Rows)
+                            {
+                                Exception exRegStat = null;
+                                string sqlRegStat = String.Format("EXECUTE PROCEDURE ci_registrar_set_regstat({0}, {1}, '{2}')", drComplete["HostID"].ToString(), helper.ACTIVE_YEAR, helper.ACTIVE_SESSION);
+                                try
+                                {
+                                    cxSpConn.ConnectToERP(sqlRegStat, ref exRegStat);
+                                    if (exRegStat != null) { throw exRegStat; }
+                                    updateCount++;
+                                }
+                                catch (Exception ex)
+                                {
+                                    debugFailedID = String.Format("{0}<p>Failed to execute: {1}</p>", debugFailedID, sqlRegStat);
+                                }
+                            }
+                            feedback = String.Format("{0}<p>Completed reg_stat update for {1} record(s)</p>", feedback, updateCount);
+                            if (cxSpConn.IsNotClosed()) { cxSpConn.Close(); }
+                            
+                            //Send list of errors to administrator
+                            if (!String.IsNullOrWhiteSpace(debugFailedID)) { ciHelper.FormatException(debugFailedID, new Exception(), null, true); }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error processing completed students", ex, null, true));
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ciHelper.FormatException("Error while getting list of all incomplete tasks", ex);
+            }
+            finally
+            {
+                if (jicsSpConn.IsNotClosed()) { jicsSpConn.Close(); }
+            }
+            this.ParentPortlet.ShowFeedback(FeedbackType.Message, feedback);
+        }
+
+        protected void aRoot_Click(object sender, EventArgs e)
+        {
+            this.ParentPortlet.ChangeScreen("SiteAdminTools");
+        }
 
         protected void btnIncomplete_Click(object sender, EventArgs e)
         {
-            #region Obsolete
-//            DataTable dtIncomplete = null;
-
-//            OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
-//            DataTable dtPortalComplete = null;
-//            Exception exPortalComplete = null;
-//            string sqlPortalComplete = @"
-//		        SELECT
-//			        CAST(U.HostID AS INT) AS HostID
-//		        FROM
-//			        CI_StudentProgress	SP	INNER JOIN	FWK_User	U	ON	SP.UserID	=	U.ID
-//		        WHERE
-//			        SP.TaskStatus	IN	('Y','W')
-//		        AND
-//			        SP.Yr	=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveYear')
-//		        AND
-//			        SP.Sess	=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveSession')
-//		        GROUP BY
-//			        HostID
-//				HAVING
-//					COUNT(*) = (SELECT COUNT(*) FROM CI_OfficeTask)
-//            ";
-//            try
-//            {
-//                dtPortalComplete = jicsConn.ConnectToERP(sqlPortalComplete, ref exPortalComplete);
-//                if (exPortalComplete != null) { throw exPortalComplete; }
-
-//                Exception exCxIncomplete = null;
-//                OdbcConnectionClass3 cxConn = helper.CONNECTION_CX;
-
-//                //Initialize to "0" for early in the process when no students have completed check-in
-//                string idsAsCommaList = "0";
-//                if (dtPortalComplete.Rows.Count > 0) {
-//                    idsAsCommaList = string.Join(",", dtPortalComplete.AsEnumerable().Select(row => row.Field<int>("id")).ToArray());
-//                }
-//                string sqlCxIncomplete = String.Format(@"
-//                    SELECT
-//	                    DIR.id, DIR.lastname, DIR.firstname, DIR.email, DIR.phone
-//                    FROM
-//	                    stu_acad_rec	SAR	INNER JOIN	directory_vw	DIR	ON	SAR.id	=	DIR.id
-//                    WHERE
-//	                    SAR.yr = {0}
-//                    AND
-//	                    SAR.sess = '{1}'
-//                    AND
-//	                    SAR.reg_stat <> 'C'
-//                    AND
-//	                    SAR.subprog IN  ('TRAD','TRAP')
-//                    AND
-//	                    SAR.id NOT IN ({2})
-//                ", helper.ACTIVE_YEAR, helper.ACTIVE_SESSION, idsAsCommaList);
-
-//                try
-//                {
-//                    dtIncomplete = cxConn.ConnectToERP(sqlCxIncomplete, ref exCxIncomplete);
-//                    if (exCxIncomplete != null) { throw exCxIncomplete; }
-//                }
-//                catch (Exception exCX)
-//                {
-//                    this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error retrieving incomplete useres from JICS", exCX, null, true));
-//                }
-//            }
-//            catch (Exception ex)
-//            {
-//                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error retrieving incomplete users from JICS", ex, null, true));
-//            }
-//            finally
-//            {
-//                if (jicsConn.IsNotClosed()) { jicsConn.Close(); }
-//            }
-            #endregion
-
             OdbcConnectionClass3 spConn = helper.CONNECTION_SP;
             DataTable dtIncomplete = null;
             Exception exIncomplete = null;
@@ -567,7 +522,6 @@ namespace Portlet.CheckInAdmin
                 if (spConn.IsNotClosed()) { spConn.Close(); }
             }
 
-            //DataTable dtIncomplete = ciHelper.GetIncompleteStudents();
             this.gvIncomplete.DataSource = dtIncomplete;
             this.gvIncomplete.DataBind();
             this.gvIncomplete.Visible = true;
@@ -611,32 +565,6 @@ namespace Portlet.CheckInAdmin
             this.gvIncomplete.Visible = false;
         }
 
-        protected void btnUpdateProgress_Click(object sender, EventArgs e)
-        {
-            DataTable dtCX = ciHelper.GetCXView();
-            DataTable dtJICS = ciHelper.GetStudentProgress();
-
-            string debug = "";
-
-            List<string> taskList = ciHelper.GetTaskViewColumns();
-            foreach (string task in taskList)
-            {
-                List<int> jicsStudentsCompletedTask = dtJICS.AsEnumerable().Where(stu => stu.Field<string>("ViewColumn") == task && stu.Field<string>("TaskStatus") == CheckInTaskStatus.Yes.ToDescriptionString()).Select(stu => stu.Field<int>("HostID")).ToList();
-                List<int> cxStudentsCompletedTask = dtCX.AsEnumerable().Where(stu => stu.Field<string>(task) == CheckInTaskStatus.Yes.ToDescriptionString() && !jicsStudentsCompletedTask.Contains(stu.Field<int>("id"))).Select(stu => stu.Field<int>("id")).ToList();
-
-                //foreach (int cxID in cxStudentsCompletedTask)
-                //{
-                //    helper.completeTask(task, cxID.ToString(), CarthageSystem.CX);
-                //}
-
-                debug = String.Format("{0}<p>Complete {1} task(s) for {2}<br />", debug, cxStudentsCompletedTask.Count.ToString(), task);
-
-                List<int> jicsStudentsWaiveTask = dtJICS.AsEnumerable().Where(stu => stu.Field<string>("ViewColumn") == task && stu.Field<string>("TaskStatus") == CheckInTaskStatus.Waived.ToDescriptionString()).Select(stu => stu.Field<int>("HostID")).ToList();
-                List<int> cxStudentsWaiveTask = dtCX.AsEnumerable().Where(stu => stu.Field<string>(task) == CheckInTaskStatus.Waived.ToDescriptionString() && !jicsStudentsWaiveTask.Contains(stu.Field<int>("id"))).Select(stu => stu.Field<int>("id")).ToList();
-
-                debug = String.Format("{0}Waive {1} task(s) for {2}</p>", debug, cxStudentsWaiveTask.Count.ToString(), task);
-            }
-            this.ParentPortlet.ShowFeedback(FeedbackType.Message, debug);
-        }
+        #endregion
     }
 }
