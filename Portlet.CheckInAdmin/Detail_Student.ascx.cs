@@ -124,41 +124,6 @@ namespace Portlet.CheckInAdmin
             }
         }
 
-        [Obsolete]
-        protected void LoadStudentProgress_Obsolete(int studentID)
-        {
-            Exception exProgress = null;
-            DataRow drCX = helper.GetCheckinRow(ref exProgress, studentID);
-
-            try
-            {
-                DataTable dtJICS = null;
-                Exception exJICS = null;
-                string sqlJICS = String.Format(@"EXECUTE dbo.CUS_spCheckIn_AdminGetTasks @intHostID = {0}", studentID);
-                dtJICS = spConn.ConnectToERP(sqlJICS, ref exJICS);
-                if (exJICS != null) { throw exJICS; }
-
-                for (int ii = 0; ii < dtJICS.Rows.Count; ii++)
-                {
-                    dtJICS.Rows[ii]["CX_Status"] = drCX[dtJICS.Rows[ii]["ViewColumn"].ToString()];
-                    //If the status from CX is Yes or the status from JICS is non-existent, use the CX value. Otherwise, use the JICS value.
-                    CheckInTaskStatus taskStatus = EnumUtil.GetEnumFromDescription<CheckInTaskStatus>(dtJICS.Rows[ii]["CX_Status"].ToString());
-                    dtJICS.Rows[ii]["TaskStatus"] = taskStatus == CheckInTaskStatus.Yes || String.IsNullOrEmpty(dtJICS.Rows[ii]["JICS_Status"].ToString()) ? dtJICS.Rows[ii]["CX_Status"].ToString() : dtJICS.Rows[ii]["JICS_Status"].ToString();
-                }
-
-                dgTasks.DataSource = dtJICS;
-                dgTasks.DataBind();
-            }
-            catch (Exception ex)
-            {
-                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("An error occurred while retrieving the student's record", ex, null, true));
-            }
-            finally
-            {
-                if (cxConn.IsNotClosed()) { cxConn.Close(); }
-            }
-        }
-
         protected void dgTasks_ItemDataBound(object sender, DataGridItemEventArgs e)
         {
             if (e.Item.ItemType == ListItemType.Item || e.Item.ItemType == ListItemType.AlternatingItem)
