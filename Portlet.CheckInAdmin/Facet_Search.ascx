@@ -129,6 +129,7 @@
         <asp:BoundField DataField="Verify Address" HeaderText="Verify Address" />
         <asp:BoundField DataField="Verify Majors" HeaderText="Verify Major" />
         <asp:BoundField DataField="Distribute Schedule" HeaderText="Schedule" />
+        <asp:BoundField DataField="Confirm Graduate Status" HeaderText="Grad Candidacy" />
         <asp:BoundField DataField="Community Code" HeaderText="Community Code" />
         <asp:BoundField DataField="Parking Permit" HeaderText="Parking Permit" />
         <%---

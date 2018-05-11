@@ -47,7 +47,7 @@ namespace Portlet.CheckInAdmin
 
             stopwatch = String.Format("{0}<p>Load student activity: {1}</p>", stopwatch, sw.Elapsed.ToString());
 
-            this.ParentPortlet.ShowFeedback(FeedbackType.Message, stopwatch);
+            //this.ParentPortlet.ShowFeedback(FeedbackType.Message, stopwatch);
 
             this.aRoot.Visible = PortalUser.Current.IsSiteAdmin;
         }
@@ -88,6 +88,21 @@ namespace Portlet.CheckInAdmin
                 //dtStudentProgressCounts = jicsConn.ConnectToERP(sqlProgress, ref exStudentProgressCounts);
                 dtStudentProgressCounts = spConn.ConnectToERP(sqlProgress, ref exStudentProgressCounts);
                 if (exStudentProgressCounts != null) { throw exStudentProgressCounts; }
+
+                //foreach (DataRow dr in dtStudentProgressCounts.Rows)
+                //{
+                //    string seriesName = String.Format("Completed{0}", dr["TaskCount"].ToString());
+                //    chartStudentProgress.Series.Add(seriesName);
+                //    chartStudentProgress.Series[seriesName].ChartType = SeriesChartType.Column;
+                //    chartStudentProgress.Series[seriesName].XValueMember = "TaskCount";
+                //    chartStudentProgress.Series[seriesName].YValueMembers = "StudentCount";
+                //    chartStudentProgress.Series[seriesName].IsValueShownAsLabel = true;
+                //    //chartStudentProgress.Series[seriesName].IsVisibleInLegend = true;
+                //}
+
+                chartStudentProgress.ChartAreas["caStudentProgress"].AxisX.Maximum = dtStudentProgressCounts.Rows.Count - 1;
+                chartStudentProgress.DataSource = dtStudentProgressCounts;
+                chartStudentProgress.DataBind();
             }
             catch (Exception ex)
             {
@@ -167,8 +182,6 @@ namespace Portlet.CheckInAdmin
             #endregion
 
 
-            chartStudentProgress.DataSource = dtStudentProgressCounts;
-            chartStudentProgress.DataBind();
 
             #region Commented out
             //            DataTable dtStudentStarted = ciHelper.GetMergedView();
@@ -438,9 +451,27 @@ namespace Portlet.CheckInAdmin
                     //For each task, execute the appropriate CX stored procedure to determine if it has been completed outside the check-in process
                     foreach (DataRow dr in dtIncomplete.Rows)
                     {
-                        CheckInTaskStatus result = helper.updatePortalTaskStatusFromCX(dr["ViewColumn"].ToString(), dr["UserID"].ToString());
-                        if (result == CheckInTaskStatus.Yes) { recordsCompleted++; }
+                        try
+                        {
+                            CheckInTaskStatus result = helper.updatePortalTaskStatusFromCX(dr["ViewColumn"].ToString(), dr["UserID"].ToString(), helper.ACTIVE_YEAR, helper.ACTIVE_SESSION, int.Parse(dr["HostID"].ToString()));
+                            if (result == CheckInTaskStatus.Yes) { recordsCompleted++; }
+                        }
+                        catch (Exception ex)
+                        {
+                            feedback = String.Format("{0}<p>Error while updating {1} for {2}<br />Message: {3}</p>", feedback, dr["ViewColumn"].ToString(), dr["UserID"].ToString(), ciHelper.FormatException("", ex));
+                        }
                     }
+                    //DataRow dr = dtIncomplete.Rows[0];
+                    //try
+                    //{
+                    //    CheckInTaskStatus result = helper.updatePortalTaskStatusFromCX(dr["ViewColumn"].ToString(), dr["UserID"].ToString(), helper.ACTIVE_YEAR, helper.ACTIVE_SESSION, int.Parse(dr["HostID"].ToString()));
+                    //    if (result == CheckInTaskStatus.Yes) { recordsCompleted++; }
+                    //}
+                    //catch (Exception ex)
+                    //{
+                    //    feedback = String.Format("{0}<p>Error while updating {1} for {2}<br />Message: {3}</p>", feedback, dr["ViewColumn"].ToString(), dr["UserID"].ToString(), ciHelper.FormatException("", ex));
+                    //}
+
                     feedback = String.Format("{0}<p>{1} incomplete tasks found; {2} were resolved.</p>", feedback, dtIncomplete.Rows.Count, recordsCompleted);
 
                     //Once the task statuses are current, run the process to update the "CompletedOn" field in CI_StudentMetaData and return the affected records so the CX updates can be made
@@ -484,10 +515,14 @@ namespace Portlet.CheckInAdmin
                         this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error processing completed students", ex, null, true));
                     }
                 }
+                else
+                {
+                    feedback = String.Format("{0}<p>No incomplete records found</p>", feedback);
+                }
             }
             catch (Exception ex)
             {
-                ciHelper.FormatException("Error while getting list of all incomplete tasks", ex);
+                feedback = String.Format("{0}<p>{1}</p>", feedback, ciHelper.FormatException("Error while getting list of all incomplete tasks", ex));
             }
             finally
             {

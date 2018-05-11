@@ -31,21 +31,22 @@
     <common:Subheader ID="shStudentProgress" runat="server" Text="Student Progress" />
     <!--- Bar chart breaking down Complete, Started, Not Started --->
     <asp:Chart ID="chartStudentProgress" runat="server" Width="700" Height="500">
-        <Legends>
+<%--        <Legends>
             <asp:Legend IsEquallySpacedItems="true" IsTextAutoFit="true" />
-        </Legends>
+        </Legends>--%>
         <Titles>
             <asp:Title Text="Chart Title: Student Progress" />
         </Titles>
         <Series>
-            <asp:Series Name="Not Started" ChartType="Bar" IsValueShownAsLabel="true" IsVisibleInLegend="true" YValueMembers="NotStarted" />
+            <asp:Series Name="Tasks Completed" ChartType="Column" IsValueShownAsLabel="true" YValueMembers="StudentCount"></asp:Series>
+<%--            <asp:Series Name="Not Started" ChartType="Bar" IsValueShownAsLabel="true" IsVisibleInLegend="true" YValueMembers="NotStarted" />
             <asp:Series Name="Started" ChartType="Bar" IsValueShownAsLabel="true" IsVisibleInLegend="true" YValueMembers="Started" />
             <asp:Series Name="One More" ChartType="Bar" IsValueShownAsLabel="true" IsVisibleInLegend="true" YValueMembers="Missing1" />
-            <asp:Series Name="Complete" ChartType="Bar" IsValueShownAsLabel="true" IsVisibleInLegend="true" YValueMembers="Complete" />
+            <asp:Series Name="Complete" ChartType="Bar" IsValueShownAsLabel="true" IsVisibleInLegend="true" YValueMembers="Complete" />--%>
         </Series>
         <ChartAreas>
             <asp:ChartArea Name="caStudentProgress" Area3DStyle-Enable3D="true">
-                <AxisX Title="Progress" />
+                <AxisX Title="Tasks Completed" Interval="1" Minimum="0" />
                 <AxisY Title="Number of Students" />
             </asp:ChartArea>
         </ChartAreas>
