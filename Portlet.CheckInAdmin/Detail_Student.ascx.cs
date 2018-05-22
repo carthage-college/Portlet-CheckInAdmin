@@ -53,30 +53,30 @@ namespace Portlet.CheckInAdmin
 
             if (foundStudent)
             {
-                OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
-                DataTable dtStudent = null;
-                Exception exStudent = null;
-                string sqlStudent = String.Format("SELECT FirstName, LastName FROM FWK_User WHERE CAST(HostID AS INT) = {0}", studentID);
+                //OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
+                //DataTable dtStudent = null;
+                //Exception exStudent = null;
+                //string sqlStudent = String.Format("SELECT FirstName, LastName FROM FWK_User WHERE CAST(HostID AS INT) = {0}", studentID);
 
-                try
-                {
-                    dtStudent = jicsConn.ConnectToERP(sqlStudent, ref exStudent);
-                    if (exStudent != null) { throw exStudent; }
-                    if (dtStudent != null && dtStudent.Rows.Count > 0)
-                    {
-                        //this.ltlStudentName.Text = String.Format("{0} {1}", dtStudent.Rows[0]["FirstName"].ToString(), dtStudent.Rows[0]["LastName"].ToString());
-                        this.shDetail.Text = String.Format("Student Detail View for {0} {1} (ID: {2})",
-                            dtStudent.Rows[0]["FirstName"].ToString(), dtStudent.Rows[0]["LastName"].ToString(), studentID);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("An error occurred while retrieving student name", ex));
-                }
-                finally
-                {
-                    if (jicsConn.IsNotClosed()) { jicsConn.Close(); }
-                }
+                //try
+                //{
+                //    dtStudent = jicsConn.ConnectToERP(sqlStudent, ref exStudent);
+                //    if (exStudent != null) { throw exStudent; }
+                //    if (dtStudent != null && dtStudent.Rows.Count > 0)
+                //    {
+                //        //this.ltlStudentName.Text = String.Format("{0} {1}", dtStudent.Rows[0]["FirstName"].ToString(), dtStudent.Rows[0]["LastName"].ToString());
+                //        this.shDetail.Text = String.Format("Student Detail View for {0} {1} (ID: {2})",
+                //            dtStudent.Rows[0]["FirstName"].ToString(), dtStudent.Rows[0]["LastName"].ToString(), studentID);
+                //    }
+                //}
+                //catch (Exception ex)
+                //{
+                //    this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("An error occurred while retrieving student name", ex));
+                //}
+                //finally
+                //{
+                //    if (jicsConn.IsNotClosed()) { jicsConn.Close(); }
+                //}
 
                 LoadStudentProgress(studentID);
             }
@@ -89,27 +89,16 @@ namespace Portlet.CheckInAdmin
             DataTable dtProgress = null;
             Exception exProgress = null;
             string sqlProgress = String.Format(@"EXECUTE CUS_spCheckIn_AdminGetStudentProgressByID @intHostID = {0}", cxID);
-//            string sqlProgress = String.Format(@"
-//	            SELECT
-//		            O.OfficeName, OT.TaskName, OT.TaskID, SP.TaskStatus, SP.CompletedBySystem, SP.StatusDate, SP.StatusByID, SP.StatusReason
-//	            FROM
-//		            CI_StudentProgress	SP	INNER JOIN	CI_OfficeTask			OT	ON	SP.TaskID			=	OT.TaskID
-//								            INNER JOIN	CI_Office				O	ON	OT.OfficeID			=	O.OfficeID
-//								            INNER JOIN	CI_OfficeTaskSession	OTS	ON	OT.TaskID			=	OTS.OfficeTaskID
-//																		            AND	OTS.ActiveYear		=	SP.Yr
-//																		            AND	OTS.ActiveSession	=	SP.Sess
-//	            WHERE
-//		            SP.UserID	=	(SELECT ID FROM FWK_User WHERE HostID = {0})
-//	            AND
-//		            SP.Yr		=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveYear')
-//	            AND
-//		            SP.Sess		=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveSession')
-//	            ORDER BY
-//		            O.Sequence, OT.Sequence", cxID);
+
             try
             {
                 dtProgress = spConn.ConnectToERP(sqlProgress, ref exProgress);
                 if (exProgress != null) { throw exProgress; }
+                if (dtProgress != null && dtProgress.Rows.Count > 0)
+                {
+                    DataRow dr = dtProgress.AsEnumerable().FirstOrDefault();
+                    this.shDetail.Text = String.Format("Student Detail View for {0} {1} (ID: {2})", dr["FirstName"].ToString(), dr["LastName"].ToString(), dr["HostID"].ToString());
+                }
                 
                 dgTasks.DataSource = dtProgress;
                 dgTasks.DataBind();

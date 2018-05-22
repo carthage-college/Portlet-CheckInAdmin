@@ -58,23 +58,6 @@ namespace Portlet.CheckInAdmin
             {
                 this.ParentPortlet.PortletViewState[ciHelper.VIEWSTATE_SEARCH_CRITERIA] = this.txtSearch.Text;
 
-                //Use a RegEx to determine if the search criteria is a valid ID format (4-9 digits)
-//                bool isID = Regex.IsMatch(this.txtSearch.Text, @"^\d{4,9}$");
-
-//                string whereClause = isID ? String.Format("AND CAST(U.HostID AS INT) = {0}", txtSearch.Text) : String.Format("AND LOWER(U.LastName) LIKE LOWER('{0}%')", txtSearch.Text);
-//                string sqlSearch = String.Format(@"
-//	                SELECT
-//		                U.LastName, U.FirstName, CAST(U.HostID AS INT) AS HostID, U.Email, SMD.IsCheckedIn, SMD.IsActive, SMD.FirstAccess, SMD.LastAccess, SMD.UserID, SMD.ActiveYear, SMD.ActiveSession
-//	                FROM
-//		                CI_StudentMetaData	SMD	INNER JOIN	FWK_User	U	ON	SMD.UserID	=	U.ID
-//	                WHERE
-//		                SMD.ActiveYear		=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveYear')
-//	                AND
-//		                SMD.ActiveSession	=	(SELECT [Value] FROM FWK_ConfigSettings WHERE Category = 'C_CheckIn' AND [Key] = 'ActiveSession')
-//	                {0}
-//                    ORDER BY
-//                        U.LastName, U.FirstName
-//                ", whereClause);
                 string sqlSearch = "EXECUTE CUS_spCheckIn_AdminSearchUsers @strSearchTerm = ?";
                 List<OdbcParameter> paramSearch = new List<OdbcParameter>()
                 {
@@ -84,41 +67,9 @@ namespace Portlet.CheckInAdmin
                 OdbcConnectionClass3 spConn = helper.CONNECTION_SP;
                 try
                 {
-                    #region Original Search
-                    //DataTable dtResults = ciHelper.GetMergedView();
-                    //List<DataRow> drResults = new List<DataRow>() { };
-                    //if (dtResults != null && dtResults.Rows.Count > 0)
-                    //{
-                    //    if (isID)
-                    //    {
-                    //        drResults = dtResults.AsEnumerable().Where(row => row.Field<int>("id") == int.Parse(this.txtSearch.Text)).ToList();
-                    //    }
-                    //    else
-                    //    {
-                    //        drResults = dtResults.AsEnumerable().Where(row => row.Field<string>("lastname").ToLower().StartsWith(this.txtSearch.Text.ToLower())).ToList();
-                    //    }
-
-                    //    this.lblSearchResults.Text = this.lblSearchResults2.Text = drResults.Count.ToString();
-                    //    this.lblSearchResults.Visible = this.lblSearchResults2.Visible = true;
-                    //    if (drResults.Count == 1)
-                    //    {
-                    //        this.ParentPortlet.PortletViewState[ciHelper.VIEWSTATE_SEARCH_STUDENTID] = this.txtSearch.Text;
-                    //        this.ParentPortlet.NextScreen("Detail_Student");
-                    //    }
-                    //    else
-                    //    {
-                    //        this.lblSearchResults.Text = this.lblSearchResults2.Text = String.Format("Found {0} matches", drResults.Count.ToString());
-                    //        gvSearchResults.DataSource = drResults.Count > 1 ? drResults.CopyToDataTable() : new DataTable();
-                    //        gvSearchResults.DataBind();
-                    //    }
-                    //}
-                    #endregion
-
-                    //OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
                     DataTable dtSearch = null;
                     Exception exSearch = null;
 
-                    //dtSearch = jicsConn.ConnectToERP(sqlSearch, ref exSearch);
                     dtSearch = spConn.ConnectToERP(sqlSearch, ref exSearch, paramSearch);
                     if (exSearch != null) { throw exSearch; }
                     if (dtSearch != null)
@@ -126,7 +77,7 @@ namespace Portlet.CheckInAdmin
                         //If the search results only return a single record, go immediately to the detail view
                         if (dtSearch.Rows.Count == 1)
                         {
-                            this.ParentPortlet.PortletViewState[ciHelper.VIEWSTATE_SEARCH_STUDENTID] = this.txtSearch.Text;
+                            this.ParentPortlet.PortletViewState[ciHelper.VIEWSTATE_SEARCH_STUDENTID] = dtSearch.Rows[0]["CX ID"].ToString(); //this.txtSearch.Text;
                             this.ParentPortlet.NextScreen("Detail_Student");
                         }
                         else
@@ -195,7 +146,7 @@ namespace Portlet.CheckInAdmin
                 LinkButton lbName = (LinkButton)e.Row.FindControl("lbStudent");
                 DataRowView drvRow = e.Row.DataItem as DataRowView;
 
-                lbName.Text = String.Format("{0} {1} ({2})", drvRow["firstname"].ToString(), drvRow["lastname"].ToString(), drvRow["HostID"].ToString());
+                lbName.Text = String.Format("{0} {1} ({2})", drvRow["First Name"].ToString(), drvRow["Last Name"].ToString(), drvRow["CX ID"].ToString());
 
                 e.Row.Cells[0].Controls.Add(lbName);
             }

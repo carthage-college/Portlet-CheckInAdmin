@@ -48,7 +48,7 @@
 --->
 
 <div class="pSection">
-    <asp:Button ID="btnBackToSearch1" runat="server" Text="Return to Search" UseSubmitBehavior="false" OnClick="btnBackToSearch_Click" />
+    <asp:Button ID="btnBackToSearch1" runat="server" Text="Return to Search" UseSubmitBehavior="true" OnClick="btnBackToSearch_Click" />
 </div>
 
 <asp:DataGrid ID="dgTasks" runat="server" AutoGenerateColumns="false" CssClass="taskTable" Width="100%" OnItemDataBound="dgTasks_ItemDataBound" DataKeyField="TaskID">
@@ -85,5 +85,5 @@
 </asp:DataGrid>
 
 <div class="pSection">
-    <asp:Button ID="btnBackToSearch2" runat="server" Text="Return to Search" UseSubmitBehavior="false" OnClick="btnBackToSearch_Click" />
+    <asp:Button ID="btnBackToSearch2" runat="server" Text="Return to Search" UseSubmitBehavior="true" OnClick="btnBackToSearch_Click" />
 </div>

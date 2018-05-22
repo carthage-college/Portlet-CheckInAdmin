@@ -17,7 +17,7 @@ END LAYOUT FOR DASHBOARD
 
 .searchNameID {margin:20px 0px;}
 
-.nameSearchResults {margin:5px 0px;}
+.nameSearchResults {margin:5px 0px;width:100%;}
 .nameSearchResults tr th {vertical-align:middle;}
 
 .nameSearchResults tr th, .nameSearchResults tr td {text-align:center;border:1px solid #000000;}
@@ -61,7 +61,7 @@ fieldset.fieldsetFacetedSearch legend {
 
 /* Office and task table */
 div.facet, table.tblFacetedSearch {clear:left;margin-bottom:20px;}
-span.facetLabel {float:left;width:100px;}
+span.facetLabel {float:left;margin-right:25px;}
 table.facetOptions {float:left;}
 table.facetOptions tbody tr td {padding-right:25px;}
 

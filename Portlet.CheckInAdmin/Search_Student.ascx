@@ -20,13 +20,13 @@
 <asp:Panel ID="panelSearchForm" runat="server" CssClass="searchNameID">
     <label for="<%= this.txtSearch.ClientID %>">Search:</label>
     <asp:TextBox ID="txtSearch" runat="server" />
-    <asp:Button ID="btnSearch" runat="server" Text="Find Student" OnClick="btnSearch_Click" />
+    <asp:Button ID="btnSearch" runat="server" Text="Find Student" OnClick="btnSearch_Click" UseSubmitBehavior="true" />
 </asp:Panel>
 
 
 <asp:Label ID="lblSearchResults" runat="server" Visible="false" />
 <%--<asp:GridView ID="gvSearchResults" runat="server" CellSpacing="0" CssClass="nameSearchResults" OnInit="gvSearchResults_Init" OnRowCreated="gvSearchResults_RowCreated" OnRowDataBound="gvSearchResults_RowDataBound" AutoGenerateColumns="false" DataKeyNames="id">--%>
-<asp:GridView ID="gvSearchResults" runat="server" CellSpacing="0" CssClass="nameSearchResults" OnRowDataBound="gvSearchResults_RowDataBound" AutoGenerateColumns="true" DataKeyNames="HostID">
+<asp:GridView ID="gvSearchResults" runat="server" CellSpacing="0" CellPadding="2" CssClass="nameSearchResults" OnRowDataBound="gvSearchResults_RowDataBound" AutoGenerateColumns="true" DataKeyNames="CX ID">
     <Columns>
         <asp:TemplateField HeaderText="Name">
             <ItemTemplate>

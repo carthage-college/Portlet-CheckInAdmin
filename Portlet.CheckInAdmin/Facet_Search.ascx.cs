@@ -389,7 +389,10 @@ namespace Portlet.CheckInAdmin
                     U.LastName, U.FirstName, U.Email
             ", sqlSelect, sqlFrom, sqlWhere, helper.ACTIVE_YEAR, helper.ACTIVE_SESSION);
 
-            this.ParentPortlet.ShowFeedback(FeedbackType.Message, sqlResults);
+            if (PortalUser.Current.IsSiteAdmin)
+            {
+                this.ParentPortlet.ShowFeedback(FeedbackType.Message, sqlResults);
+            }
 
             try
             {
@@ -539,13 +542,14 @@ namespace Portlet.CheckInAdmin
 
                 if (!String.IsNullOrWhiteSpace(this.ddlGradCandidacy.SelectedValue))
                 {
-                    OdbcConnectionClass3 cxConn = helper.CONNECTION_CX;
+                    OdbcConnectionClass3 cxConn = helper.CONNECTION_CX_SP;
                     DataTable dtGrad = null;
                     Exception exGrad = null;
 
                     try
                     {
-                        string sqlGrad = String.Format("SELECT student_id FROM cc_stg_undergrad_candidacy WHERE datecreated >= TO_DATE('{0}', '%Y-%m-%d')", helper.START_DATE);
+                        //string sqlGrad = String.Format("SELECT student_id FROM cc_stg_undergrad_candidacy WHERE datecreated >= TO_DATE('{0}', '%Y-%m-%d')", helper.START_DATE);
+                        string sqlGrad = String.Format("EXECUTE PROCEDURE ci_admin_facetedsearch_undergradcandidacy('{0}')", helper.START_DATE);
 
                         dtGrad = cxConn.ConnectToERP(sqlGrad, ref exGrad);
                         if (exGrad != null) { throw exGrad; }
@@ -591,14 +595,14 @@ namespace Portlet.CheckInAdmin
                     for (int ii = 0; ii < dtResults.Rows.Count; ii++)
                     {
                         //Establish database connection
-                        OdbcConnectionClass3 cxSpConn = helper.CONNECTION_CX;
+                        OdbcConnectionClass3 cxSpConn = helper.CONNECTION_CX_SP;
 
                         //Initialize query variables
                         DataTable dtPER = null;
                         Exception exPER = null;
 
-                        string sqlPER = String.Format(@"SELECT adm_sess, adm_yr, cl, TRIM(ASR.txt) AS acad_stat FROM prog_enr_rec PER LEFT JOIN acad_stat_table ASR ON PER.acst = ASR.acst WHERE id = {0} AND subprog = 'TRAD'",
-                            dtResults.Rows[ii]["HostID"].ToString());
+                        string sqlPER = String.Format(@"EXECUTE PROCEDURE ci_admin_facetedsearch_extrafields({0})", dtResults.Rows[ii]["HostID"].ToString());
+
                         try
                         {
                             dtPER = cxSpConn.ConnectToERP(sqlPER, ref exPER);

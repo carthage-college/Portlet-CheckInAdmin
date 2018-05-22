@@ -213,28 +213,86 @@ namespace Portlet.CheckInAdmin
             return errorMessage;
         }
 
-        public string GetPortalIDByHostID(int cxID)
+        public string FormatException(string label, Exception ex, PortalUser loggedInUser = null, int? studentHostID = null, bool emailAdmin = false, PortalUser studentUser = null)
         {
-            string portalID = "";
-            DataTable dtPortal = null;
-            Exception exPortal = null;
-            OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
+            string sqlLog = "";
+            
+            return sqlLog;
+        }
+
+        public void LogEvent(string loggedInID = null, int? loggedInHostID = null, string studentID = null, int? studentHostID = null, string eventTypeID = null, int? eventTypeSequence = null,
+            string message = null, string screen = null, string sql = null, int? activeYear = null, string activeSession = null)
+        {
+            //Initialize ODBC connection
+            OdbcConnectionClass3 spConn = helper.CONNECTION_SP;
+            
+            //Initialize variables and SQL for query
+            Exception exLogEvent = null;
+            string sqlLogEvent = String.Format(@"
+                EXECUTE CUS_spCheckIn_LogEvent
+                    @uuidLoggedInID = ?, @intLoggedInHostID = ?, @uuidStudentID = ?, @intStudentID = ?, @uuidEventTypeID = ?, @intEventTypeSeq = ?,
+                    @strMessage = ?, @strScreen = ?, @strSQL = ?, @intYear = ?, @strSession = ?;
+            ");
+
             try
             {
-                string sqlPortal = String.Format(@"SELECT ID FROM FWK_User WHERE HostID = {0}", cxID);
-                dtPortal = jicsConn.ConnectToERP(sqlPortal, ref exPortal);
-                if (exPortal != null) { throw exPortal; }
-                if (dtPortal != null && dtPortal.Rows.Count > 0)
+                //If values for optional arguments were not passed to this method, send NULL to the stored procedure
+                string strLoggedInHostID = loggedInHostID.HasValue ? loggedInHostID.Value.ToString() : "NULL",
+                    strStudentHostID = studentHostID.HasValue ? studentHostID.Value.ToString() : "NULL",
+                    strEventTypeSequence = eventTypeSequence.HasValue ? eventTypeSequence.Value.ToString() : "NULL",
+                    strActiveYear = activeYear.HasValue ? activeYear.Value.ToString() : "NULL";
+
+                List<OdbcParameter> paramLogEvent = new List<OdbcParameter>()
                 {
-                    portalID = dtPortal.Rows[0]["ID"].ToString();
-                }
+                      new OdbcParameter("loggedInID", loggedInID)
+                    , new OdbcParameter("loggedInHost", strLoggedInHostID)
+                    , new OdbcParameter("studentID", studentID)
+                    , new OdbcParameter("studentHost", strStudentHostID)
+                    , new OdbcParameter("eventType", eventTypeID)
+                    , new OdbcParameter("eventSequence", strEventTypeSequence)
+                    , new OdbcParameter("message", message)
+                    , new OdbcParameter("screen", screen)
+                    , new OdbcParameter("sql", sql)
+                    , new OdbcParameter("year", strActiveYear)
+                    , new OdbcParameter("session", activeSession)
+                };
+
+                spConn.ConnectToERP(sqlLogEvent, ref exLogEvent, paramLogEvent);
+                if (exLogEvent != null) { throw exLogEvent; }
             }
             catch (Exception ex)
             {
-                FormatException("Error trying to match student ID with portal ID", ex, null, true);
+
             }
-            return portalID;
+            finally
+            {
+                if (spConn.IsNotClosed()) { spConn.Close(); }
+            }
         }
+
+        //[Obsolete]
+        //public string GetPortalIDByHostID(int cxID)
+        //{
+        //    string portalID = "";
+        //    DataTable dtPortal = null;
+        //    Exception exPortal = null;
+        //    OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
+        //    try
+        //    {
+        //        string sqlPortal = String.Format(@"SELECT ID FROM FWK_User WHERE HostID = {0}", cxID);
+        //        dtPortal = jicsConn.ConnectToERP(sqlPortal, ref exPortal);
+        //        if (exPortal != null) { throw exPortal; }
+        //        if (dtPortal != null && dtPortal.Rows.Count > 0)
+        //        {
+        //            portalID = dtPortal.Rows[0]["ID"].ToString();
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        FormatException("Error trying to match student ID with portal ID", ex, null, true);
+        //    }
+        //    return portalID;
+        //}
 
         public DataTable GetTasks()
         {
@@ -351,10 +409,11 @@ namespace Portlet.CheckInAdmin
             sw.Reset();
 
             sw.Start();
-            OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
+            OdbcConnectionClass3 jicsConn = helper.CONNECTION_SP;
             DataTable dtStudentsFromJICS = null;
             Exception exStudentsFromJICS = null;
-            string sqlStudentsFromJICS = String.Format("SELECT CAST(FU.HostID AS INT) AS HostID, SMD.IsActive FROM CI_StudentMetaData SMD INNER JOIN FWK_User FU ON SMD.UserID = FU.ID WHERE ActiveYear = {0} AND ActiveSession = '{1}'", helper.ACTIVE_YEAR, helper.ACTIVE_SESSION);
+            string sqlStudentsFromJICS = String.Format(@"EXECUTE CUS_spCheckIn_GetStudentMetaData @intYear = {0}, @strSession = '{1}'", helper.ACTIVE_YEAR, helper.ACTIVE_SESSION);
+
             try
             {
                 dtStudentsFromJICS = jicsConn.ConnectToERP(sqlStudentsFromJICS, ref exStudentsFromJICS);
@@ -471,21 +530,11 @@ namespace Portlet.CheckInAdmin
 
         public DataTable GetAthletics()
         {
-            OdbcConnectionClass3 cxConn = helper.CONNECTION_CX;
+            OdbcConnectionClass3 cxConn = helper.CONNECTION_CX_SP;
             DataTable dtAthletics = null;
             Exception exAthletics = null;
 
-            string sqlAthletics = @"
-                SELECT
-                    TRIM(invl) AS involve_code, TRIM(txt) AS involve_text
-                FROM
-                    invl_table
-                WHERE
-                    sanc_sport = 'Y'
-                AND
-                    TODAY BETWEEN active_date AND NVL(inactive_date, TODAY)
-                ORDER BY
-                    txt";
+            string sqlAthletics = @"EXECUTE PROCEDURE ci_admin_facetedsearch_athletics_list()";
 
             try
             {

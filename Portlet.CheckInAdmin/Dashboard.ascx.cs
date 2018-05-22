@@ -32,20 +32,20 @@ namespace Portlet.CheckInAdmin
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            string stopwatch = "";
+            //string stopwatch = "";
             Stopwatch sw = new Stopwatch();
             sw.Start();
             LoadStudentProgress();
             sw.Stop();
 
-            stopwatch = String.Format("<p>Load student progress: {0}</p>", sw.Elapsed.ToString());
+            //stopwatch = String.Format("<p>Load student progress: {0}</p>", sw.Elapsed.ToString());
 
             sw.Reset();
             sw.Start();
             LoadStudentActivity();
             sw.Stop();
 
-            stopwatch = String.Format("{0}<p>Load student activity: {1}</p>", stopwatch, sw.Elapsed.ToString());
+            //stopwatch = String.Format("{0}<p>Load student activity: {1}</p>", stopwatch, sw.Elapsed.ToString());
 
             //this.ParentPortlet.ShowFeedback(FeedbackType.Message, stopwatch);
 
@@ -76,7 +76,6 @@ namespace Portlet.CheckInAdmin
             #endregion
 
             #region Faster Progress Count
-            //OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
             OdbcConnectionClass3 spConn = helper.CONNECTION_SP;
             DataTable dtStudentProgressCounts = null;
             Exception exStudentProgressCounts = null;
@@ -85,7 +84,6 @@ namespace Portlet.CheckInAdmin
             
             try
             {
-                //dtStudentProgressCounts = jicsConn.ConnectToERP(sqlProgress, ref exStudentProgressCounts);
                 dtStudentProgressCounts = spConn.ConnectToERP(sqlProgress, ref exStudentProgressCounts);
                 if (exStudentProgressCounts != null) { throw exStudentProgressCounts; }
 
@@ -113,122 +111,8 @@ namespace Portlet.CheckInAdmin
                 if (spConn.IsNotClosed()) { spConn.Close(); }
             }
 
-            #region Commented out
-            //            OdbcConnectionClass3 cxConn = helper.CONNECTION_CX;
-//            DataTable dtUnfinishedCX = null;
-//            Exception exUnfinishedCX = null;
-//            string sqlUnfinishedCX = String.Format(@"
-//                SELECT
-//                    id
-//                FROM
-//                    stu_acad_rec
-//                WHERE
-//                    yr = {0}
-//                AND
-//                    sess = '{1}'
-//                AND
-//                    subprog IN ('TRAD','TRAP')
-//                AND
-//                    reg_stat <> 'C'
-//            ", helper.ACTIVE_YEAR, helper.ACTIVE_SESSION);
-//            try
-//            {
-//                dtUnfinishedCX = cxConn.ConnectToERP(sqlUnfinishedCX, ref exUnfinishedCX);
-//                if (exUnfinishedCX != null) { throw exUnfinishedCX; }
-
-//                jicsConn = helper.CONNECTION_JICS;
-
-//                try
-//                {
-//                    DataTable dtNotStarted = null;
-//                    Exception exNotStarted = null;
-//                    string idsList = "0";
-//                    if (dtUnfinishedCX.Rows.Count > 0)
-//                    {
-//                        idsList = string.Join(",", dtUnfinishedCX.AsEnumerable().Select(row => row.Field<int>("id")).ToArray());
-//                    }
-//                    string sqlNotStarted = String.Format(@"
-//                        SELECT
-//	                        COUNT(U.ID) AS NotStarted
-//                        FROM
-//	                        FWK_User	U	LEFT JOIN	CI_StudentProgress	SP	ON	U.ID	=	SP.UserID
-//                        WHERE
-//	                        CAST(HostID AS INT) IN ({0})
-//                        AND
-//	                        SP.ProgressID	IS	NULL
-//                    ", idsList);
-
-//                    dtNotStarted = jicsConn.ConnectToERP(sqlNotStarted, ref exNotStarted);
-//                    if (exNotStarted != null) { throw exNotStarted; }
-//                    if (dtNotStarted != null)
-//                    {
-//                        dtStudentProgressCounts.Rows[0]["NotStarted"] = dtNotStarted.Rows.Count.ToString();
-//                    }
-//                }
-//                catch (Exception exUnstarted)
-//                {
-//                    this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error pulling students who have not started from portal", exUnstarted));
-//                }
-//            }
-//            catch (Exception ex)
-//            {
-//                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error while pulling list of students who have not started", ex));
-//            }
-//            finally
-//            {
-//                if (cxConn.IsNotClosed()) { cxConn.Close(); }
-            //            }
-            #endregion
             #endregion
 
-
-
-            #region Commented out
-            //            DataTable dtStudentStarted = ciHelper.GetMergedView();
-//            DataTable dtStudentMissing1 = dtStudentStarted;
-
-//            DataTable dtStudentComplete = ciHelper.GetCompletedStudents();
-
-//            OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
-
-//            DataTable dtStudentProgress = null;
-//            Exception exStudentProgress = null;
-//            string sqlStudentProgress = @"
-//                SELECT
-//                    SUM(CASE WHEN Summary.Completed = Summary.TotalTasks THEN 1 ELSE 0 END) AS 'Complete',
-//                    SUM(CASE WHEN Summary.Completed = TotalTasks - 1 THEN 1 ELSE 0 END) AS 'Missing1',
-//                    SUM(CASE WHEN Summary.Completed < TotalTasks - 1 THEN 1 ELSE 0 END) AS 'Started',
-//                    0 AS 'NotStarted'
-//                FROM
-//                    (
-//                        SELECT
-//                            UserID, COUNT(*) AS 'Completed', (SELECT COUNT(*) FROM CI_OfficeTask) AS 'TotalTasks'
-//                        FROM
-//                            CI_StudentProgress
-//                        WHERE
-//                            TaskStatus IN ('Y','W')
-//                        GROUP BY UserID
-//                    )    Summary
-//            ";
-
-//            try
-//            {
-//                dtStudentProgress = jicsConn.ConnectToERP(sqlStudentProgress, ref exStudentProgress);
-//                if (exStudentProgress != null) { throw exStudentProgress; }
-//                dtStudentProgress.Rows[0]["NotStarted"] = StudentsNotStarted();
-//                dtStudentProgress.Rows[0]["Complete"] = dtStudentComplete == null ? 0 : dtStudentComplete.Rows.Count;
-//                chartStudentProgress.DataSource = dtStudentProgress;
-//                chartStudentProgress.DataBind();
-//            }
-//            catch (Exception ex)
-//            {
-//                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error while drawing student progress chart on dashboard", ex));
-//            }
-//            finally
-//            {
-//                if (jicsConn.IsNotClosed()) { jicsConn.Close(); }
-            //            }
-            #endregion
 
             this.shStudentProgress.Text = String.Format("Student Progress for {0} {1}", helper.ACTIVE_SESSION_TEXT, helper.ACTIVE_YEAR);
         }
@@ -325,93 +209,93 @@ namespace Portlet.CheckInAdmin
         /// Calculate the number of traditional undergraduate students who have not yet completed or waived a check-in task
         /// </summary>
         /// <returns></returns>
-        protected int StudentsNotStarted()
-        {
-            int studentsNotStarted = 0;
+//        protected int StudentsNotStarted()
+//        {
+//            int studentsNotStarted = 0;
 
-            #region Initialize CX variables
+//            #region Initialize CX variables
 
-            //Initialize variables for CX query
-            OdbcConnectionClass3 cxConn = helper.CONNECTION_CX;
-            DataTable dtCXStudents = null;
-            Exception exCXStudents = null;
+//            //Initialize variables for CX query
+//            OdbcConnectionClass3 cxConn = helper.CONNECTION_CX;
+//            DataTable dtCXStudents = null;
+//            Exception exCXStudents = null;
 
-            string sqlCXStudents = String.Format(@"
-                SELECT
-                    id, firstname, lastname
-                FROM
-                    directory_vw
-                WHERE
-                    class_year IN ('FF','FR','FN','JR','PFF','PTR','SO','SR','UT')
-                GROUP BY
-                    id, firstname, lastname
-            ");
-            #endregion
-
-            #region Initialize JICS variables
-            //Initialize variables for JICS query
-            //OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
-            OdbcConnectionClass3 spConn = helper.CONNECTION_SP;
-            DataTable dtJICSStudents = null;
-            Exception exJICSStudents = null;
-//            string sqlJICSStudents = String.Format(@"
-//                SELECT CAST(HostID AS INT) AS HostID FROM FWK_User U INNER JOIN CI_StudentProgress SP ON U.ID = SP.UserID WHERE TaskStatus <> 'N' AND HostID IS NOT NULL GROUP BY HostID
+//            string sqlCXStudents = String.Format(@"
+//                SELECT
+//                    id, firstname, lastname
+//                FROM
+//                    directory_vw
+//                WHERE
+//                    class_year IN ('FF','FR','FN','JR','PFF','PTR','SO','SR','UT')
+//                GROUP BY
+//                    id, firstname, lastname
 //            ");
-            string sqlJICSStudents = "EXECUTE CUS_spCheckIn_AdminStudentsWithCompletedTask";
-            #endregion
+//            #endregion
 
-            try
-            {
-                //Get all undergraduate students including incoming freshmen
-                dtCXStudents = cxConn.ConnectToERP(sqlCXStudents, ref exCXStudents);
+//            #region Initialize JICS variables
+//            //Initialize variables for JICS query
+//            //OdbcConnectionClass3 jicsConn = helper.CONNECTION_JICS;
+//            OdbcConnectionClass3 spConn = helper.CONNECTION_SP;
+//            DataTable dtJICSStudents = null;
+//            Exception exJICSStudents = null;
+////            string sqlJICSStudents = String.Format(@"
+////                SELECT CAST(HostID AS INT) AS HostID FROM FWK_User U INNER JOIN CI_StudentProgress SP ON U.ID = SP.UserID WHERE TaskStatus <> 'N' AND HostID IS NOT NULL GROUP BY HostID
+////            ");
+//            string sqlJICSStudents = "EXECUTE CUS_spCheckIn_AdminStudentsWithCompletedTask";
+//            #endregion
+
+//            try
+//            {
+//                //Get all undergraduate students including incoming freshmen
+//                dtCXStudents = cxConn.ConnectToERP(sqlCXStudents, ref exCXStudents);
                 
-                //If the attempt at retrieving all undergrad students failed, throw an error
-                if (exCXStudents != null) { throw exCXStudents; }
+//                //If the attempt at retrieving all undergrad students failed, throw an error
+//                if (exCXStudents != null) { throw exCXStudents; }
 
-                //As long as at least one student was found, continue
-                if (dtCXStudents != null && dtCXStudents.Rows.Count > 0)
-                {
-                    try
-                    {
-                        //Get all students who have completed (or had waived) at least one check-in task
-                        dtJICSStudents = spConn.ConnectToERP(sqlJICSStudents, ref exJICSStudents);
+//                //As long as at least one student was found, continue
+//                if (dtCXStudents != null && dtCXStudents.Rows.Count > 0)
+//                {
+//                    try
+//                    {
+//                        //Get all students who have completed (or had waived) at least one check-in task
+//                        dtJICSStudents = spConn.ConnectToERP(sqlJICSStudents, ref exJICSStudents);
                         
-                        //If the attempt at retrieving all students who have finished something in check-in fails, throw an error
-                        if (exJICSStudents != null) { throw exJICSStudents; }
+//                        //If the attempt at retrieving all students who have finished something in check-in fails, throw an error
+//                        if (exJICSStudents != null) { throw exJICSStudents; }
 
-                        //As long as at least one student was returned from JICS, continue
-                        if(dtJICSStudents != null && dtJICSStudents.Rows.Count > 0)
-                        {
-                            //Put the CX ids from the portal into a list
-                            List<int> jicsIDs = dtJICSStudents.AsEnumerable().Select(row => row.Field<int>("HostID")).ToList();
+//                        //As long as at least one student was returned from JICS, continue
+//                        if(dtJICSStudents != null && dtJICSStudents.Rows.Count > 0)
+//                        {
+//                            //Put the CX ids from the portal into a list
+//                            List<int> jicsIDs = dtJICSStudents.AsEnumerable().Select(row => row.Field<int>("HostID")).ToList();
 
-                            //Count the number of students who appear in the CX list, but not in the JICS list
-                            studentsNotStarted = dtCXStudents.AsEnumerable().Count(cx => !jicsIDs.Contains(cx.Field<int>("id")));
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("An exception occurred while retrieving students from JICS", ex));
-                    }
-                    finally
-                    {
-                        //Always close your database connections
-                        if (spConn.IsNotClosed()) { spConn.Close(); }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("An exception occurred while retrieving students from CX", ex));
-            }
-            finally
-            {
-                //Always close your database conenctions
-                if (cxConn.IsNotClosed()) { cxConn.Close(); }
-            }
+//                            //Count the number of students who appear in the CX list, but not in the JICS list
+//                            studentsNotStarted = dtCXStudents.AsEnumerable().Count(cx => !jicsIDs.Contains(cx.Field<int>("id")));
+//                        }
+//                    }
+//                    catch (Exception ex)
+//                    {
+//                        this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("An exception occurred while retrieving students from JICS", ex));
+//                    }
+//                    finally
+//                    {
+//                        //Always close your database connections
+//                        if (spConn.IsNotClosed()) { spConn.Close(); }
+//                    }
+//                }
+//            }
+//            catch (Exception ex)
+//            {
+//                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("An exception occurred while retrieving students from CX", ex));
+//            }
+//            finally
+//            {
+//                //Always close your database conenctions
+//                if (cxConn.IsNotClosed()) { cxConn.Close(); }
+//            }
 
-            return studentsNotStarted;
-        }
+//            return studentsNotStarted;
+//        }
 
         #endregion
 
