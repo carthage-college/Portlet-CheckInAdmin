@@ -3,6 +3,13 @@
 
 <script type="text/javascript">
     $(function () {
+        $.each($('.taskTable tbody tr').not(':first'), function (obj, index) {
+            var taskStatus = $(this).find('td:eq(2) input[disabled="disabled"]').val();
+            $(this).find('td:first').addClass(taskStatus == 'Yes' || taskStatus == 'Waived' ? 'complete' : 'incomplete');
+        });
+
+        /* Admissions requested change to highlight each completed row, rather than grouped by office */
+        /*
         //Get all rows of the table
         var $tableRows = $('.taskTable tbody tr').not(':first');
         var offices = [];
@@ -35,6 +42,7 @@
                 }
             });
         });
+        */
     });
 </script>
 

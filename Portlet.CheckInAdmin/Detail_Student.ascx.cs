@@ -48,7 +48,7 @@ namespace Portlet.CheckInAdmin
             }
             catch (Exception ex)
             {
-                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("An exception occurred while retrieving the student's ID", ex));
+                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("An exception occurred while retrieving the student's ID", ex, null, null, studentID, LogEventType.Error, LogScreen.DetailStudent));
             }
 
             if (foundStudent)

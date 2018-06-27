@@ -67,24 +67,6 @@ namespace Portlet.CheckInAdmin {
         protected global::Jenzabar.Common.Web.UI.Controls.ContentBox contentDownloads;
         
         /// <summary>
-        /// gvIncomplete control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.GridView gvIncomplete;
-        
-        /// <summary>
-        /// btnIncomplete control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnIncomplete;
-        
-        /// <summary>
         /// btnUpdateSMD control.
         /// </summary>
         /// <remarks>
@@ -101,6 +83,69 @@ namespace Portlet.CheckInAdmin {
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::System.Web.UI.WebControls.Button btnUpdateRegStat;
+        
+        /// <summary>
+        /// btnIncomplete control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnIncomplete;
+        
+        /// <summary>
+        /// gvIncomplete control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.GridView gvIncomplete;
+        
+        /// <summary>
+        /// btnNotStarted control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnNotStarted;
+        
+        /// <summary>
+        /// gvNotStarted control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.GridView gvNotStarted;
+        
+        /// <summary>
+        /// panelCheckInSummary control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Panel panelCheckInSummary;
+        
+        /// <summary>
+        /// shCheckInSummary control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::Jenzabar.Common.Web.UI.Controls.Subheader shCheckInSummary;
+        
+        /// <summary>
+        /// chartCheckInSummary control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.DataVisualization.Charting.Chart chartCheckInSummary;
         
         /// <summary>
         /// panelStudentProgress control.

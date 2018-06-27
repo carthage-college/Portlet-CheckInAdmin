@@ -104,7 +104,9 @@ namespace Portlet.CheckInAdmin
                 }
                 catch (Exception ex)
                 {
-                    this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("An exception occurred while loading office/task table", ex));
+                    //this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("An exception occurred while loading office/task table", ex));
+                    this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("An exception occurred while loading office/task table", ex, null, null, null, null,
+                        LogEventType.Error, LogScreen.FacetSearch));
                 }
 
                 #endregion
@@ -310,7 +312,9 @@ namespace Portlet.CheckInAdmin
             }
             catch (Exception ex)
             {
-                ciHelper.FormatException("Error while retrieving faceted search results in button click event", ex, null, true);
+                //ciHelper.FormatException("Error while retrieving faceted search results in button click event", ex, null, true);
+                this.ParentPortlet.ShowFeedback(FeedbackType.Error,
+                    ciHelper.FormatException("Error while retrieving faceted search results in button click event", ex, null, null, null, LogEventType.Error, LogScreen.FacetSearch));
             }
         }
 
@@ -346,8 +350,8 @@ namespace Portlet.CheckInAdmin
                             LEFT JOIN   CI_StudentProgress  {1} ON  U.ID        =   {1}.UserID
                                                                 AND {1}.TaskID  =   (SELECT TaskID FROM CI_OfficeTask WHERE ViewColumn = '{2}')
                                                                 AND {1}.Yr      =   {3}
-                                                                AND {1}.Sess    =   '{4}'
-                ", sqlFrom, tableAlias, viewColumn, helper.ACTIVE_YEAR, helper.ACTIVE_SESSION);
+                                                                AND {1}.Sess    =   '{4}'"
+                , sqlFrom, tableAlias, viewColumn, helper.ACTIVE_YEAR, helper.ACTIVE_SESSION);
 
                 //Get the collection of radio buttons which correspond to the current task
                 List<RadioButton> radioForTask = GetRadioGroup(tblOffices, String.Format("Task{0}", viewColumn));
@@ -391,6 +395,7 @@ namespace Portlet.CheckInAdmin
 
             if (PortalUser.Current.IsSiteAdmin)
             {
+                ciHelper.FormatException("Formatted SQL for faceted search", new Exception("No problem, just testing log"), null, null, null, LogEventType.Error, LogScreen.FacetSearch, sqlResults, helper.ACTIVE_YEAR, helper.ACTIVE_SESSION);
                 this.ParentPortlet.ShowFeedback(FeedbackType.Message, sqlResults);
             }
 
@@ -404,19 +409,20 @@ namespace Portlet.CheckInAdmin
 
                 if (!String.IsNullOrWhiteSpace(this.ddlStanding.SelectedValue))
                 {
-                    OdbcConnectionClass3 cxConn = helper.CONNECTION_CX_LIVE;
+                    OdbcConnectionClass3 cxConn = helper.CONNECTION_CX_SP;
                     DataTable dtStanding = null;
                     Exception exStanding = null;
-                    string sqlStanding = String.Format(@"
-                        SELECT
-	                        TRIM(host_id) AS id
-                        FROM
-	                        jenzcst_rec
-                        WHERE
-	                        status_code	{0} IN ('PFF','PTR')
-                        GROUP BY
-                            id
-                    ", (this.ddlStanding.SelectedValue == "N" ? "NOT" : ""));
+                    string sqlStanding = String.Format("EXECUTE PROCEDURE ci_admin_facetedsearch_newstudent({0}, '{1}', '{2}')", helper.ACTIVE_YEAR, helper.ACTIVE_SESSION, this.ddlStanding.SelectedValue);
+//                    string sqlStanding = String.Format(@"
+//                        SELECT
+//	                        TRIM(host_id) AS id
+//                        FROM
+//	                        jenzcst_rec
+//                        WHERE
+//	                        status_code	{0} IN ('PFF','PTR')
+//                        GROUP BY
+//                            id
+//                    ", (this.ddlStanding.SelectedValue == "N" ? "NOT" : ""));
 
                     try
                     {
@@ -424,7 +430,7 @@ namespace Portlet.CheckInAdmin
                         if (exStanding != null) { throw exStanding; }
                         if (dtStanding != null && dtStanding.Rows.Count > 0)
                         {
-                            List<string> standingIDs = dtStanding.AsEnumerable().Select(standing => standing.Field<string>("id")).ToList();
+                            List<string> standingIDs = dtStanding.AsEnumerable().Select(standing => standing.Field<int>("student_id").ToString()).ToList();
                             var filteredRows = from row in dtResults.AsEnumerable()
                                                where standingIDs.Contains(row.Field<string>("HostID"))
                                                select row;
@@ -433,7 +439,8 @@ namespace Portlet.CheckInAdmin
                     }
                     catch (Exception ex)
                     {
-                        this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error while filtering facet search based on standing", ex, null, true));
+                        //this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error while filtering facet search based on standing", ex, null, true));
+                        this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error while filtering facet search based on standing", ex, null, null, null, LogEventType.Error, LogScreen.FacetSearch, sqlStanding));
                     }
                     finally
                     {
@@ -446,48 +453,84 @@ namespace Portlet.CheckInAdmin
                 #region Faceted Search - Athletics
 
                 List<ListItem> selectedSports = lbAthletics.Items.Cast<ListItem>().Where(item => item.Selected == true).ToList();
+                List<string> athleteIDs = new List<string>() { };
                 if (selectedSports.Count > 0)
                 {
-                    string athleticsList = String.Format("'{0}'", String.Join("','", selectedSports.Select(li => li.Value).ToList()));
+                    OdbcConnectionClass3 cxConn = helper.CONNECTION_CX_SP;
 
-                    OdbcConnectionClass3 cxConn = helper.CONNECTION_CX_LIVE;
-                    DataTable dtAthletics = null;
-                    Exception exAthletics = null;
-
-                    try
+                    foreach (ListItem sport in selectedSports)
                     {
-                        string sqlAthletics = String.Format(@"
-                            SELECT
-	                            TRIM(IR.id::varchar(10)) AS id
-                            FROM
-	                            involve_rec	IR	INNER JOIN	invl_table	IT	ON	TRIM(IR.invl)	=	TRIM(IT.invl)
-												                            AND	IT.sanc_sport	=	'Y'
-                            WHERE
-	                            TODAY	BETWEEN	IR.beg_date AND NVL(IR.end_date, TODAY)
-                            AND
-	                            IT.invl	IN	({0})
-                            GROUP BY
-                                IR.id
-                        ", athleticsList);
+                        DataTable dtAthletics = null;
+                        Exception exAthletics = null;
+                        string sqlAthletics = String.Format("EXECUTE PROCEDURE ci_admin_facetedsearch_athletics_roster(?)");
+                        List<OdbcParameter> paramAthletics = new List<OdbcParameter>()
+                        {
+                            new OdbcParameter("involve_code", sport.Value)
+                        };
 
-                        dtAthletics = cxConn.ConnectToERP(sqlAthletics, ref exAthletics);
+                        try
+                        {
+                            dtAthletics = cxConn.ConnectToERP(sqlAthletics, ref exAthletics, paramAthletics);
+                            if (exAthletics != null) { throw exAthletics; }
+                            if (dtAthletics != null && dtAthletics.Rows.Count > 0)
+                            {
+                                athleteIDs = athleteIDs.Union<string>(dtAthletics.AsEnumerable().Select(row => row.Field<string>("id")).ToList()).ToList();
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            ciHelper.FormatException("An error occurred while building list of athlete IDs for the faceted search.", ex, null, null, null, LogEventType.Error, LogScreen.FacetSearch, sqlAthletics);
+                        }
+                    }
 
-                        if (exAthletics != null) { throw exAthletics; }
-                        List<string> athleteIDs = dtAthletics.AsEnumerable().Select(athlete => athlete.Field<string>("id")).ToList();
-                        var filteredRows = from row in dtResults.AsEnumerable()
-                                           where athleteIDs.Contains(row.Field<string>("HostID"))
-                                           select row;
-                        dtResults = filteredRows == null || filteredRows.Count() == 0 ? new DataTable() : filteredRows.CopyToDataTable();
-                    }
-                    catch (Exception ex)
-                    {
-                        this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error while filtering facet search based on athletics", ex, null, true));
-                    }
-                    finally
-                    {
-                        if (cxConn.IsNotClosed()) { cxConn.Close(); }
-                    }
+                    if (cxConn.IsNotClosed()) { cxConn.Close(); }
+                    var filteredRows = from row in dtResults.AsEnumerable()
+                                       where athleteIDs.Contains(row.Field<string>("HostID"))
+                                       select row;
+                    dtResults = filteredRows == null || filteredRows.Count() == 0 ? new DataTable() : filteredRows.CopyToDataTable();
                 }
+//                if (selectedSports.Count > 0)
+//                {
+//                    string athleticsList = String.Format("'{0}'", String.Join("','", selectedSports.Select(li => li.Value).ToList()));
+
+//                    OdbcConnectionClass3 cxConn = helper.CONNECTION_CX_LIVE;
+//                    DataTable dtAthletics = null;
+//                    Exception exAthletics = null;
+
+//                    try
+//                    {
+//                        string sqlAthletics = String.Format(@"
+//                            SELECT
+//	                            TRIM(IR.id::varchar(10)) AS id
+//                            FROM
+//	                            involve_rec	IR	INNER JOIN	invl_table	IT	ON	TRIM(IR.invl)	=	TRIM(IT.invl)
+//												                            AND	IT.sanc_sport	=	'Y'
+//                            WHERE
+//	                            TODAY	BETWEEN	IR.beg_date AND NVL(IR.end_date, TODAY)
+//                            AND
+//	                            IT.invl	IN	({0})
+//                            GROUP BY
+//                                IR.id
+//                        ", athleticsList);
+
+//                        dtAthletics = cxConn.ConnectToERP(sqlAthletics, ref exAthletics);
+
+//                        if (exAthletics != null) { throw exAthletics; }
+//                        List<string> athleteIDs = dtAthletics.AsEnumerable().Select(athlete => athlete.Field<string>("id")).ToList();
+//                        var filteredRows = from row in dtResults.AsEnumerable()
+//                                           where athleteIDs.Contains(row.Field<string>("HostID"))
+//                                           select row;
+//                        dtResults = filteredRows == null || filteredRows.Count() == 0 ? new DataTable() : filteredRows.CopyToDataTable();
+//                    }
+//                    catch (Exception ex)
+//                    {
+//                        this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error while filtering facet search based on athletics", ex, null, true));
+//                    }
+//                    finally
+//                    {
+//                        if (cxConn.IsNotClosed()) { cxConn.Close(); }
+//                    }
+//                }
 
                 #endregion
 
@@ -618,7 +661,8 @@ namespace Portlet.CheckInAdmin
                         }
                         catch (Exception ex)
                         {
-                            ciHelper.FormatException("Could not load program enrollment data in faceted search.", ex);
+                            //ciHelper.FormatException("Could not load program enrollment data in faceted search.", ex);
+                            ciHelper.FormatException("Could not load program enrollment data in faceted search.", ex, null, null, null, LogEventType.Error, LogScreen.FacetSearch, sqlPER);
                         }
                         finally
                         {
@@ -633,7 +677,9 @@ namespace Portlet.CheckInAdmin
             }
             catch (Exception ex)
             {
-                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("An exception occurred while running the faceted search.", ex));
+                //this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("An exception occurred while running the faceted search.", ex));
+                this.ParentPortlet.ShowFeedback(FeedbackType.Error,
+                    ciHelper.FormatException("An exception occurred while running the faceted search.", ex, null, null, null, LogEventType.Error, LogScreen.FacetSearch));
             }
             finally
             {

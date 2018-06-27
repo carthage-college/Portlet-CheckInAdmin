@@ -54,7 +54,10 @@ namespace Portlet.CheckInAdmin
             }
             catch (Exception ex)
             {
-                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Unable to load configuration data", ex));
+                //this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Unable to load configuration data", ex));
+                this.ParentPortlet.ShowFeedback(FeedbackType.Error,
+                    ciHelper.FormatException("Unable to load configuration data", ex, null, null, null, null, LogEventType.Error, LogScreen.SiteAdminTools, sqlConfig)
+                );
             }
             finally
             {
@@ -88,7 +91,10 @@ namespace Portlet.CheckInAdmin
             }
             catch (Exception ex)
             {
-                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error while retrieving OfficeTaskSession in session initialization interface.", ex));
+                //this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error while retrieving OfficeTaskSession in session initialization interface.", ex));
+                this.ParentPortlet.ShowFeedback(FeedbackType.Error,
+                    ciHelper.FormatException("Error while retrieving OfficeTaskSession in session initialization interface.", ex, null, null, null, LogEventType.Error, LogScreen.SiteAdminTools, sqlOfficeTaskSession)
+                );
             }
             finally
             {
@@ -111,21 +117,22 @@ namespace Portlet.CheckInAdmin
             DataTable dtOfficeTaskSession = null;
             Exception exOfficeTaskSession = null;
 
+            string sqlOfficeTaskSession = String.Format(@"
+                SELECT
+                    O.OfficeID, O.OfficeName, OT.TaskID, OT.TaskName, OT.ViewColumn, O.OfficeName + ' - ' + OT.TaskName AS OfficeTaskLabel
+                FROM
+                    CI_OfficeTask   OT  INNER JOIN  CI_Office				O   ON  OT.OfficeID			=   O.OfficeID
+                                        LEFT JOIN	CI_OfficeTaskSession	OTS	ON	OT.TaskID			=	OTS.OfficeTaskID
+                                                                                AND	OTS.ActiveYear		=	{0}
+                                                                                AND	OTS.ActiveSession	=	'{1}'
+                WHERE
+                    OTS.OfficeTaskSessionID IS  NULL
+                ORDER BY
+                    O.Sequence, O.OfficeName, OT.Sequence, OT.TaskName"
+            , helper.ACTIVE_YEAR, helper.ACTIVE_SESSION);
+
             try
             {
-                string sqlOfficeTaskSession = String.Format(@"
-                    SELECT
-                        O.OfficeID, O.OfficeName, OT.TaskID, OT.TaskName, OT.ViewColumn, O.OfficeName + ' - ' + OT.TaskName AS OfficeTaskLabel
-                    FROM
-                        CI_OfficeTask   OT  INNER JOIN  CI_Office				O   ON  OT.OfficeID			=   O.OfficeID
-                                            LEFT JOIN	CI_OfficeTaskSession	OTS	ON	OT.TaskID			=	OTS.OfficeTaskID
-                                                                                    AND	OTS.ActiveYear		=	{0}
-                                                                                    AND	OTS.ActiveSession	=	'{1}'
-                    WHERE
-                        OTS.OfficeTaskSessionID IS  NULL
-                    ORDER BY
-                        O.Sequence, O.OfficeName, OT.Sequence, OT.TaskName"
-                , helper.ACTIVE_YEAR, helper.ACTIVE_SESSION);
 
                 dtOfficeTaskSession = jicsSpConn.ConnectToERP(sqlOfficeTaskSession, ref exOfficeTaskSession);
                 if (exOfficeTaskSession != null) { throw exOfficeTaskSession; }
@@ -138,7 +145,9 @@ namespace Portlet.CheckInAdmin
             }
             catch (Exception ex)
             {
-                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("<p>Could not load Office Task Session initialization.</p>", ex));
+                //this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("<p>Could not load Office Task Session initialization.</p>", ex));
+                this.ParentPortlet.ShowFeedback(FeedbackType.Error,
+                    ciHelper.FormatException("<p>Could not load Office Task Session initialization.</p>", ex, null, null, null, LogEventType.Error, LogScreen.SiteAdminTools, sqlOfficeTaskSession));
             }
             finally
             {
@@ -154,7 +163,9 @@ namespace Portlet.CheckInAdmin
             }
             catch (Exception ex)
             {
-                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Could not set range for rollover task year", ex));
+                //this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Could not set range for rollover task year", ex));
+                this.ParentPortlet.ShowFeedback(FeedbackType.Error,
+                    ciHelper.FormatException("Could not set range for rollover task year", ex, null, null, null, LogEventType.Error, LogScreen.SiteAdminTools));
             }
 
             try
@@ -174,7 +185,9 @@ namespace Portlet.CheckInAdmin
             }
             catch (Exception ex)
             {
-                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Could not load checkbox list of officetasksession", ex));
+                //this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Could not load checkbox list of officetasksession", ex));
+                this.ParentPortlet.ShowFeedback(FeedbackType.Error,
+                    ciHelper.FormatException("Could not load checkbox list of officetasksession", ex, null, null, null, LogEventType.Error, LogScreen.SiteAdminTools));
             }
         }
 
@@ -207,12 +220,15 @@ namespace Portlet.CheckInAdmin
                 }
                 catch (Exception ex)
                 {
-                    this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Could not retrieve students to update meta data", ex));
+                    //this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Could not retrieve students to update meta data", ex));
+                    this.ParentPortlet.ShowFeedback(FeedbackType.Error,
+                        ciHelper.FormatException("Could not retrieve students to update meta data", ex, null, null, null, LogEventType.Error, LogScreen.SiteAdminTools, sqlStudents));
                 }
             }
             catch (Exception ex)
             {
-                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error while initializing student meta data", ex));
+                //this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error while initializing student meta data", ex));
+                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error while initializing student meta data", ex, null, null, null, LogEventType.Error, LogScreen.SiteAdminTools));
             }
         }
 
@@ -256,7 +272,8 @@ namespace Portlet.CheckInAdmin
             }
             catch (Exception ex)
             {
-                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Failed to update configuration settings", ex));
+                //this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Failed to update configuration settings", ex));
+                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Failed to update configuration settings", ex, null, null, null, LogEventType.Error, LogScreen.SiteAdminTools, sqlUpdate));
             }
             finally
             {
@@ -296,7 +313,9 @@ namespace Portlet.CheckInAdmin
             }
             catch (Exception ex)
             {
-                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error while attempting to insert OfficeTaskSession records", ex));
+                //this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error while attempting to insert OfficeTaskSession records", ex));
+                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error while attempting to insert OfficeTaskSession records", ex, null, null, null,
+                    LogEventType.Error, LogScreen.SiteAdminTools, sqlInsert));
             }
             finally
             {
@@ -355,7 +374,8 @@ namespace Portlet.CheckInAdmin
                     }
                     catch (Exception ex)
                     {
-                        this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Could not update rollover data", ex));
+                        //this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Could not update rollover data", ex));
+                        this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Could not update rollover data", ex, null, null, null, LogEventType.Error, LogScreen.SiteAdminTools, sqlUpdate));
                     }
 
                     feedback = String.Format("{0}<p>{1}</p>", feedback, sqlUpdate);
@@ -363,7 +383,8 @@ namespace Portlet.CheckInAdmin
             }
             catch (Exception ex)
             {
-                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Could not reset rollover data", ex));
+                //this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Could not reset rollover data", ex));
+                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Could not reset rollover data", ex, null, null, null, LogEventType.Error, LogScreen.SiteAdminTools, sqlReset));
             }
             finally
             {
@@ -390,7 +411,9 @@ namespace Portlet.CheckInAdmin
             }
             catch (Exception ex)
             {
-                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException(String.Format("<p>Could not initialize student progress</p><p>{0}</p>", sqlStudentProgress), ex));
+                //this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException(String.Format("<p>Could not initialize student progress</p><p>{0}</p>", sqlStudentProgress), ex));
+                this.ParentPortlet.ShowFeedback(FeedbackType.Error,
+                    ciHelper.FormatException(String.Format("<p>Could not initialize student progress</p><p>{0}</p>", sqlStudentProgress), ex, null, null, null, LogEventType.Error, LogScreen.SiteAdminTools, sqlStudentProgress));
             }
             finally
             {
@@ -411,7 +434,8 @@ namespace Portlet.CheckInAdmin
             }
             catch (Exception ex)
             {
-                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException(String.Format("<p>Could not process rollover data</p><p>{0}</p>", sqlProcessRollover), ex));
+                this.ParentPortlet.ShowFeedback(FeedbackType.Error,
+                    ciHelper.FormatException(String.Format("<p>Could not process rollover data</p><p>{0}</p>", sqlProcessRollover), ex, null, null, null, LogEventType.Error, LogScreen.SiteAdminTools, sqlProcessRollover));
             }
             finally
             {

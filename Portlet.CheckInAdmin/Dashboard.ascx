@@ -7,24 +7,60 @@
 <asp:Panel ID="panelNavigation" runat="server" CssClass="clear">
     <asp:LinkButton ID="aFacetSearch" runat="server" Text="Search by Student Progress" OnClick="aFacetSearch_Click" /> |
     <asp:LinkButton ID="aNameSearch" runat="server" Text="Search by Student Name/ID" OnClick="aNameSearch_Click" /> |
-    <asp:LinkButton ID="aRoot" runat="server" Text="Site Admin Tools" Visible="false" OnClick="aRoot_Click" />
+    <asp:LinkButton ID="aRoot" runat="server" Text="Site Admin Tools (Admin only)" Visible="false" OnClick="aRoot_Click" />
     <common:ContentBox ID="contentDownloads" runat="server" CssClass="dashboardDownload">
         <h4>Reporting/Action Center</h4>
-        <asp:GridView ID="gvIncomplete" runat="server" Visible="false" AutoGenerateColumns="false" GridLines="Both">
-            <Columns>
-                <asp:BoundField DataField="HostID" HeaderText="Carthage ID" />
-                <asp:BoundField DataField="lastname" HeaderText="Last Name" />
-                <asp:BoundField DataField="firstname" HeaderText="First Name" />
-                <asp:BoundField DataField="email" HeaderText="Email" />
-                <asp:BoundField DataField="TaskList" HeaderText="Incomplete Tasks" />
-                <%--<asp:BoundField DataField="phone" HeaderText="Phone" />--%>
-            </Columns>
-        </asp:GridView>
-        <asp:Button ID="btnIncomplete" runat="server" Text="Students with tasks remaining" OnClick="btnIncomplete_Click" />
 
         <asp:Button ID="btnUpdateSMD" runat="server" Text="Update Students to Check In" OnClick="btnUpdateSMD_Click" />
         <asp:Button ID="btnUpdateRegStat" runat="server" Text="Update reg_stat" OnClick="btnUpdateRegStat_Click" />
+
+        <div class="pSection">
+            <h4>Download Excel File</h4>
+            <asp:Button ID="btnIncomplete" runat="server" Text="Students with tasks remaining" OnClick="btnIncomplete_Click" />
+            <!--- Grid for export of "Students with tasks remaining" --->
+            <asp:GridView ID="gvIncomplete" runat="server" Visible="false" AutoGenerateColumns="false" GridLines="Both">
+                <Columns>
+                    <asp:BoundField DataField="HostID" HeaderText="Carthage ID" />
+                    <asp:BoundField DataField="lastname" HeaderText="Last Name" />
+                    <asp:BoundField DataField="firstname" HeaderText="First Name" />
+                    <asp:BoundField DataField="CompletedTasks" HeaderText="Completed Tasks" />
+                    <asp:BoundField DataField="TotalTasks" HeaderText="Total Tasks" />
+                    <asp:BoundField DataField="PercentComplete" HeaderText="Percent Complete" />
+                    <asp:BoundField DataField="email" HeaderText="Email" />
+                    <asp:BoundField DataField="TaskList" HeaderText="Incomplete Tasks" />
+                </Columns>
+            </asp:GridView>
+
+            <asp:Button ID="btnNotStarted" runat="server" Text="Students who have not started" OnClick="btnNotStarted_Click" />
+            <asp:GridView ID="gvNotStarted" runat="server" Visible="false" AutoGenerateColumns="false" GridLines="Both">
+                <Columns>
+                    <asp:BoundField DataField="HostID" HeaderText="Carthage ID" />
+                    <asp:BoundField DataField="lastname" HeaderText="Last Name" />
+                    <asp:BoundField DataField="firstname" HeaderText="First Name" />
+                    <asp:BoundField DataField="email" HeaderText="Email" />
+                </Columns>
+            </asp:GridView>
+        </div>
     </common:ContentBox>
+</asp:Panel>
+
+<asp:Panel ID="panelCheckInSummary" runat="server">
+    <common:Subheader ID="shCheckInSummary" runat="server" Text="Check-In Summary" />
+    <asp:Chart ID="chartCheckInSummary" runat="server" Width="900">
+        <Legends>
+            <asp:Legend IsEquallySpacedItems="true" IsTextAutoFit="true" />
+        </Legends>
+        <Series>
+            <asp:Series Name="Not Logged In: Student has not accessed check-in" ChartType="Bar" IsValueShownAsLabel="true" IsVisibleInLegend="true" YValueMembers="NotLoggedIn" />
+            <asp:Series Name="No Tasks Completed: There are 0 check-in tasks marked 'Yes'" ChartType="Bar" IsValueShownAsLabel="true" IsVisibleInLegend="true" YValueMembers="NothingCompleted" />
+            <asp:Series Name="No Tasks Completed/Waived: There are 0 check-in tasks marked 'Yes' or 'Waived'" ChartType="Bar" IsValueShownAsLabel="true" IsVisibleInLegend="true" YValueMembers="NothingCompletedWaived" />
+            <asp:Series Name="One Task Remaining: Student is missing only one task" ChartType="Bar" IsValueShownAsLabel="true" IsVisibleInLegend="true" YValueMembers="OneTaskRemaining" />
+            <asp:Series Name="Finished Check-In: Student has finished all check-in tasks" ChartType="Bar" IsValueShownAsLabel="true" IsVisibleInLegend="true" YValueMembers="Finished" />
+        </Series>
+        <ChartAreas>
+            <asp:ChartArea Name="caCheckInSummary" Area3DStyle-Enable3D="true" />
+        </ChartAreas>
+    </asp:Chart>
 </asp:Panel>
 
 <asp:Panel ID="panelStudentProgress" runat="server" CssClass="chart">

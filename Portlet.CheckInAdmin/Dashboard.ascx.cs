@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Odbc;
+using System.Globalization;
 using System.Linq;
 using System.Web.UI;
 using System.Web.UI.DataVisualization;
@@ -32,27 +33,50 @@ namespace Portlet.CheckInAdmin
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            //string stopwatch = "";
             Stopwatch sw = new Stopwatch();
             sw.Start();
             LoadStudentProgress();
             sw.Stop();
 
-            //stopwatch = String.Format("<p>Load student progress: {0}</p>", sw.Elapsed.ToString());
+            //ciHelper.LogEvent(null, null, null, LogEventType.Info, String.Format("<p>Load student progress: {0}</p>", sw.Elapsed.ToString()), LogScreen.Dashboard);
 
             sw.Reset();
             sw.Start();
             LoadStudentActivity();
             sw.Stop();
 
-            //stopwatch = String.Format("{0}<p>Load student activity: {1}</p>", stopwatch, sw.Elapsed.ToString());
+            LoadCheckInSummary();
 
-            //this.ParentPortlet.ShowFeedback(FeedbackType.Message, stopwatch);
+            //ciHelper.LogEvent(null, null, null, LogEventType.Info, String.Format("<p>Load student activity: {0}</p>", sw.Elapsed.ToString()), LogScreen.Dashboard);
 
             this.aRoot.Visible = PortalUser.Current.IsSiteAdmin;
         }
 
         #region Data Loading
+
+        private void LoadCheckInSummary()
+        {
+            OdbcConnectionClass3 spConn = helper.CONNECTION_SP;
+            DataTable dtSummary = null;
+            Exception exSummary = null;
+
+            string sqlSummary = "EXECUTE CUS_spCheckIn_AdminChartSummary";
+            try
+            {
+                dtSummary = spConn.ConnectToERP(sqlSummary, ref exSummary);
+                if (exSummary != null) { throw exSummary; }
+                chartCheckInSummary.DataSource = dtSummary;
+                chartCheckInSummary.DataBind();
+            }
+            catch (Exception ex)
+            {
+                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatExceptionMessage(ex));
+            }
+            finally
+            {
+                if (spConn.IsNotClosed()) { spConn.Close(); }
+            }
+        }
 
         private void LoadStudentProgress()
         {
@@ -195,7 +219,10 @@ namespace Portlet.CheckInAdmin
             }
             catch (Exception ex)
             {
-                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error while drawing chart for student activity", ex));
+                //this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("Error while drawing chart for student activity", ex));
+                this.ParentPortlet.ShowFeedback(FeedbackType.Error,
+                    ciHelper.FormatException("Error while drawing chart for student activity", ex, null, null, null, null, LogEventType.Error, LogScreen.Dashboard, sqlStudentActivity)
+                );
             }
             finally
             {
@@ -313,6 +340,7 @@ namespace Portlet.CheckInAdmin
         protected void btnUpdateSMD_Click(object sender, EventArgs e)
         {
             string feedback = ciHelper.GenerateStudentMetaData();
+            ciHelper.LogEvent(null, null, null, LogEventType.Info, feedback, LogScreen.Dashboard);
             this.ParentPortlet.ShowFeedback(FeedbackType.Message, feedback);
         }
 
@@ -342,7 +370,10 @@ namespace Portlet.CheckInAdmin
                         }
                         catch (Exception ex)
                         {
-                            feedback = String.Format("{0}<p>Error while updating {1} for {2}<br />Message: {3}</p>", feedback, dr["ViewColumn"].ToString(), dr["UserID"].ToString(), ciHelper.FormatException("", ex));
+                            //feedback = String.Format("{0}<p>Error while updating {1} for {2}<br />Message: {3}</p>", feedback, dr["ViewColumn"].ToString(), dr["UserID"].ToString(), ciHelper.FormatException("", ex));
+                            feedback = String.Format("{0}<p>Error while updating {1} for {2}<br />Message: {3}</p>", feedback, dr["ViewColumn"].ToString(), dr["UserID"].ToString(),
+                                    ciHelper.FormatException("", ex, null, null, null, LogEventType.Error, LogScreen.Dashboard, sqlIncomplete)
+                            );
                         }
                     }
                     //DataRow dr = dtIncomplete.Rows[0];
@@ -406,12 +437,14 @@ namespace Portlet.CheckInAdmin
             }
             catch (Exception ex)
             {
-                feedback = String.Format("{0}<p>{1}</p>", feedback, ciHelper.FormatException("Error while getting list of all incomplete tasks", ex));
+                //feedback = String.Format("{0}<p>{1}</p>", feedback, ciHelper.FormatException("Error while getting list of all incomplete tasks", ex));
+                feedback = String.Format("{0}<p>{1}</p>", feedback, ciHelper.FormatException("Error while getting list of all incomplete tasks", ex, null, null, null, LogEventType.Error, LogScreen.Dashboard));
             }
             finally
             {
                 if (jicsSpConn.IsNotClosed()) { jicsSpConn.Close(); }
             }
+            ciHelper.LogEvent(null, null, null, LogEventType.Info, feedback, LogScreen.Dashboard);
             this.ParentPortlet.ShowFeedback(FeedbackType.Message, feedback);
         }
 
@@ -434,7 +467,7 @@ namespace Portlet.CheckInAdmin
             }
             catch (Exception ex)
             {
-                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("An exception occurred while exporting incomplete tasks", ex, null, true));
+                this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("An exception occurred while exporting incomplete tasks", ex, null, null, null, LogEventType.Error, LogScreen.Dashboard, sqlIncomplete));
             }
             finally
             {
@@ -484,6 +517,47 @@ namespace Portlet.CheckInAdmin
             this.gvIncomplete.Visible = false;
         }
 
+        protected void btnNotStarted_Click(object sender, EventArgs e)
+        {
+
+        }
+
         #endregion
+
+        public void ExportFile(DataTable dtQueryResults, string fileName = "Check-In Export File")
+        {
+            var mstream = new MemoryStream();
+            var sw = new StreamWriter(mstream);
+            var dgResults = ciHelper.CreateDataGrid();
+
+            ciHelper.ConfigureDataGrid(ref dgResults, dtQueryResults, true, false, true, 5, "");
+
+            dgResults.DataSource = dtQueryResults;
+            dgResults.DataBind();
+
+            var stringWrite = new StringWriter();
+            var htmlWrite = new HtmlTextWriter(stringWrite);
+            dgResults.RenderControl(htmlWrite);
+
+            htmlWrite.Flush();
+
+            sw.WriteLine(stringWrite.ToString().Replace("\n", "").Replace("\r", "").Replace("  ", ""));
+
+            sw.Flush();
+            sw.Close();
+
+            byte[] byteArray = mstream.ToArray();
+
+            mstream.Flush();
+            mstream.Close();
+
+            Response.Clear();
+            Response.AddHeader("Content-Type", "application/vnd.ms-excel");
+            Response.AddHeader("Content-Disposition", String.Format("attachment; filename={0}.xls", fileName));
+            Response.AddHeader("Content-Length", byteArray.Length.ToString(CultureInfo.InvariantCulture));
+            Response.ContentType = "application/octet-stream";
+            Response.BinaryWrite(byteArray);
+            Response.End();
+        }
     }
 }

@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web.UI.WebControls;
+using Jenzabar.Common;
 using Jenzabar.Common.Globalization;
 using Jenzabar.Common.Web.UI.Controls;
 using Jenzabar.Portal.Framework;
@@ -91,7 +92,10 @@ namespace Portlet.CheckInAdmin
                 }
                 catch (Exception ex)
                 {
-                    this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("An exception occurred while filtering search results", ex));
+                    //this.ParentPortlet.ShowFeedback(FeedbackType.Error, ciHelper.FormatException("An exception occurred while filtering search results", ex));
+                    this.ParentPortlet.ShowFeedback(FeedbackType.Error,
+                        ciHelper.FormatException("An exception occurred while filtering search results", ex, PortalUser.Current, null, null, LogEventType.Error, LogScreen.CheckInAdminHelper, sqlSearch)
+                    );
                 }
                 finally
                 {

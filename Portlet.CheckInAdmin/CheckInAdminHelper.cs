@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Data;
 using System.Data.Odbc;
 using System.Linq;
@@ -9,6 +10,7 @@ using System.Web.UI.WebControls;
 using CUS.OdbcConnectionClass3;
 using Portlet.CheckInStudent;
 using Jenzabar.Common;
+using Jenzabar.Common.Mail;
 using Jenzabar.Portal.Framework;
 //Export to Excel
 using System.IO;
@@ -22,6 +24,28 @@ using System.Diagnostics;
 
 namespace Portlet.CheckInAdmin
 {
+    #region Enum Helpers
+
+    public enum LogEventType
+    {
+        [DescriptionAttribute("1")]Debug,
+        [DescriptionAttribute("2")]Info,
+        [DescriptionAttribute("3")]Error
+    }
+
+    public enum LogScreen
+    {
+        [DescriptionAttribute("CheckInAdminHelper.cs")]CheckInAdminHelper,
+        [DescriptionAttribute("CI_Admin.cs")]CheckInAdmin,
+        [DescriptionAttribute("Dashboard.ascx.cs")]Dashboard,
+        [DescriptionAttribute("Detail_Student.ascx.cs")]DetailStudent,
+        [DescriptionAttribute("Facet_Search.ascx.cs")]FacetSearch,
+        [DescriptionAttribute("Search_Student.ascx.cs")]StudentSearch,
+        [DescriptionAttribute("SiteAdminTools.ascx.cs")]SiteAdminTools,
+    }
+
+    #endregion
+
     public class CheckInAdminHelper
     {
         Helper helper = new Helper();
@@ -183,6 +207,7 @@ namespace Portlet.CheckInAdmin
             return taskStatus;
         }
 
+        [Obsolete]
         public string FormatException(string label, Exception ex, PortalUser user = null, bool emailAdmin = false)
         {
             user = user == null ? PortalUser.Current : user;
@@ -213,61 +238,150 @@ namespace Portlet.CheckInAdmin
             return errorMessage;
         }
 
-        public string FormatException(string label, Exception ex, PortalUser loggedInUser = null, int? studentHostID = null, bool emailAdmin = false, PortalUser studentUser = null)
+        /// <summary>
+        /// Generate HTML markup to display the contents of an exception object
+        /// </summary>
+        /// <param name="exObject">The exception object thrown by the calling page.</param>
+        /// <returns>Formatted string using the contents of the Exception object.</returns>
+        public string FormatExceptionMessage(Exception exObject)
         {
-            string sqlLog = "";
-            
-            return sqlLog;
-        }
-
-        public void LogEvent(string loggedInID = null, int? loggedInHostID = null, string studentID = null, int? studentHostID = null, string eventTypeID = null, int? eventTypeSequence = null,
-            string message = null, string screen = null, string sql = null, int? activeYear = null, string activeSession = null)
-        {
-            //Initialize ODBC connection
-            OdbcConnectionClass3 spConn = helper.CONNECTION_SP;
-            
-            //Initialize variables and SQL for query
-            Exception exLogEvent = null;
-            string sqlLogEvent = String.Format(@"
-                EXECUTE CUS_spCheckIn_LogEvent
-                    @uuidLoggedInID = ?, @intLoggedInHostID = ?, @uuidStudentID = ?, @intStudentID = ?, @uuidEventTypeID = ?, @intEventTypeSeq = ?,
-                    @strMessage = ?, @strScreen = ?, @strSQL = ?, @intYear = ?, @strSession = ?;
-            ");
-
+            string errorMessage = "";
             try
             {
-                //If values for optional arguments were not passed to this method, send NULL to the stored procedure
-                string strLoggedInHostID = loggedInHostID.HasValue ? loggedInHostID.Value.ToString() : "NULL",
-                    strStudentHostID = studentHostID.HasValue ? studentHostID.Value.ToString() : "NULL",
-                    strEventTypeSequence = eventTypeSequence.HasValue ? eventTypeSequence.Value.ToString() : "NULL",
-                    strActiveYear = activeYear.HasValue ? activeYear.Value.ToString() : "NULL";
-
-                List<OdbcParameter> paramLogEvent = new List<OdbcParameter>()
-                {
-                      new OdbcParameter("loggedInID", loggedInID)
-                    , new OdbcParameter("loggedInHost", strLoggedInHostID)
-                    , new OdbcParameter("studentID", studentID)
-                    , new OdbcParameter("studentHost", strStudentHostID)
-                    , new OdbcParameter("eventType", eventTypeID)
-                    , new OdbcParameter("eventSequence", strEventTypeSequence)
-                    , new OdbcParameter("message", message)
-                    , new OdbcParameter("screen", screen)
-                    , new OdbcParameter("sql", sql)
-                    , new OdbcParameter("year", strActiveYear)
-                    , new OdbcParameter("session", activeSession)
-                };
-
-                spConn.ConnectToERP(sqlLogEvent, ref exLogEvent, paramLogEvent);
-                if (exLogEvent != null) { throw exLogEvent; }
+                errorMessage = String.Format("<p>Message: {0}</p><p>Inner Exception Stack Trace: {1}</p><pre>Stack Trace: {2}</pre><br /><pre>Exception as string: {3}</pre><p>Source: {4}</p>",
+                    (String.IsNullOrWhiteSpace(exObject.Message) ? "[No Message]" : exObject.Message),
+                    (exObject.InnerException == null ? "[No Inner Exception]" : exObject.InnerException.StackTrace),
+                    (String.IsNullOrWhiteSpace(exObject.StackTrace) ? "[No Stack Trace]" : exObject.StackTrace),
+                    exObject.ToString(),
+                    exObject.Source
+                );
             }
             catch (Exception ex)
             {
+                errorMessage = String.Format("<p>Exception occurred while formatting original exception.</p><p>{0}</p>", ex.ToString());
+            }
+            return errorMessage;
+        }
 
+        public string FormatException(string message, Exception exObject, PortalUser loggedInUser = null, string studentID = null, int? studentHostID = null, LogEventType? eventType = null,
+            LogScreen? screen = null, string sql = null, int? activeYear = null, string activeSession = null)
+        {
+            loggedInUser = loggedInUser ?? PortalUser.Current;
+            int? loggedInUserHostID = null;
+            if (!String.IsNullOrWhiteSpace(loggedInUser.HostID))
+            {
+                loggedInUserHostID = int.Parse(loggedInUser.HostID);
+            }
+            return FormatException(message, exObject, loggedInUser.Guid.ToString(), loggedInUserHostID, studentID, studentHostID, eventType, screen, sql, activeYear, activeSession);
+        }
+
+        public string FormatException(string message, Exception exObject, string loggedInID = null, int? loggedInHostID = null, string studentID = null, int? studentHostID = null, LogEventType? eventType = null,
+            LogScreen? screen = null, string sql = null, int? activeYear = null, string activeSession = null)
+        {
+            bool logEventSuccessful = false;
+            try
+            {
+                message = String.Format("<p>User Message: {0}</p>{1}", message, FormatExceptionMessage(exObject));
+                logEventSuccessful = LogEvent(loggedInID, loggedInHostID, studentID, studentHostID, eventType, message, screen, sql, activeYear, activeSession);
+            }
+            catch (Exception ex)
+            {
+                FormatExceptionMessage(ex);
+            }
+            return message;
+        }
+
+        public bool LogEvent(PortalUser loggedInUser = null, string studentID = null, int? studentHostID = null, LogEventType? eventType = null, string message = null,
+            LogScreen? screen = null, string sql = null, int? activeYear = null, string activeSession = null)
+        {
+            loggedInUser = loggedInUser ?? PortalUser.Current;
+            return LogEvent(loggedInUser.Guid.ToString(), null, studentID, studentHostID, eventType, message, screen, sql, activeYear, activeSession);
+        }
+
+        public bool LogEvent(string loggedInID = null, int? loggedInHostID = null, string studentID = null, int? studentHostID = null, LogEventType? eventType = null,
+            string message = null, LogScreen? screen = null, string sql = null, int? activeYear = null, string activeSession = null)
+        {
+            //Initialize ODBC connection
+            OdbcConnectionClass3 spConn = helper.CONNECTION_SP;
+
+            //Determine if log event was successful
+            bool logSuccessful = false;
+            
+            //Initialize variables and SQL for query
+            Exception exLogEvent = null;
+
+            string sqlLogEvent = String.Format(@"
+                EXECUTE CUS_spCheckIn_LogEvent @strMessage = ?, @strScreen = ?, @intEventTypeSeq = ?
+            ");
+
+            //Populate parameters for stored procedure
+            List<OdbcParameter> paramLogEvent = new List<OdbcParameter>()
+            {
+                  new OdbcParameter("message", message)
+                , new OdbcParameter("screen", screen.ToDescriptionString())
+                , new OdbcParameter("eventSequence", eventType.HasValue ? eventType.ToDescriptionString() : LogEventType.Error.ToDescriptionString())
+            };
+
+            if(!String.IsNullOrWhiteSpace(loggedInID))
+            {
+                sqlLogEvent = String.Format("{0}, @uuidLoggedInID = ?", sqlLogEvent);
+                paramLogEvent.Add(new OdbcParameter("loggedInID", loggedInID));
+            }
+            if (loggedInHostID.HasValue)
+            {
+                sqlLogEvent = String.Format("{0}, @intLoggedInHostID = ?", sqlLogEvent);
+                paramLogEvent.Add(new OdbcParameter("loggedInHostID", loggedInHostID));
+            }
+            if (!String.IsNullOrWhiteSpace(studentID))
+            {
+                sqlLogEvent = String.Format("{0}, @uuidStudentID = ?", sqlLogEvent);
+                paramLogEvent.Add(new OdbcParameter("studentID", studentID));
+            }
+            if (studentHostID.HasValue)
+            {
+                sqlLogEvent = String.Format("{0}, @intStudentID = ?", sqlLogEvent);
+                paramLogEvent.Add(new OdbcParameter("studentHostID", studentHostID));
+            }
+            if (!String.IsNullOrWhiteSpace(sql))
+            {
+                sqlLogEvent = String.Format("{0}, @strSQL = ?", sqlLogEvent);
+                paramLogEvent.Add(new OdbcParameter("sql", sql));
+            }
+            if (activeYear.HasValue)
+            {
+                sqlLogEvent = String.Format("{0}, @intYear = ?", sqlLogEvent);
+                paramLogEvent.Add(new OdbcParameter("year", activeYear));
+            }
+            if (!String.IsNullOrWhiteSpace(activeSession))
+            {
+                sqlLogEvent = String.Format("{0}, @strSession = ?", sqlLogEvent);
+                paramLogEvent.Add(new OdbcParameter("session", activeSession));
+            }
+
+            try
+            {
+                spConn.ConnectToERP(sqlLogEvent, ref exLogEvent, paramLogEvent);
+                if (exLogEvent != null) { throw exLogEvent; }
+
+                logSuccessful = true;
+            }
+            catch (Exception ex)
+            {
+                string messageBody = String.Format("{0}<p>SQL: {1}</p><ul>", FormatExceptionMessage(ex), sqlLogEvent);
+                foreach (OdbcParameter param in paramLogEvent)
+                {
+                    messageBody = String.Format("{0}<li>{1}: {2}</li>", messageBody, param.ParameterName, param.Value);
+                }
+                messageBody = String.Format("{0}</ul>", messageBody);
+
+                Email.CreateAndSendMailMessage("confirmation@carthage.edu", "mkishline@carthage.edu", "Check-In: Error in Log", messageBody);
             }
             finally
             {
                 if (spConn.IsNotClosed()) { spConn.Close(); }
             }
+
+            return logSuccessful;
         }
 
         //[Obsolete]
@@ -349,7 +463,7 @@ namespace Portlet.CheckInAdmin
             }
             catch (Exception ex)
             {
-                FormatException("An exception occurred while loading office/task table", ex);
+                FormatException("An exception occurred while loading office/task table", ex, null, null, null, LogEventType.Error, LogScreen.CheckInAdminHelper, sqlOffice);
             }
             finally
             {
@@ -383,7 +497,7 @@ namespace Portlet.CheckInAdmin
             }
             else
             {
-                debug = String.Format("{0}<p>Unknown term {1} for data load</p>", debug, helper.ACTIVE_SESSION);
+                debug = String.Format("{0}<p>Unknown term '{1}' for data load</p>", debug, helper.ACTIVE_SESSION);
             }
 
             OdbcConnectionClass3 cxSpConn = helper.CONNECTION_CX_SP;
@@ -401,7 +515,10 @@ namespace Portlet.CheckInAdmin
             }
             catch (Exception ex)
             {
-                debug = String.Format("{0}<p>Encountered a problem getting students from CX:</p><p>{1}</p>", debug, this.FormatException("", ex));
+                //debug = String.Format("{0}<p>Encountered a problem getting students from CX:</p><p>{1}</p>", debug, this.FormatException("", ex));
+                debug = String.Format("{0}<p>Encountered a problem getting students from CX:</p><p>{1}</p>", debug,
+                    this.FormatException("", ex, null, null, null, LogEventType.Error, LogScreen.CheckInAdminHelper, sqlStudentsFromCX)
+                );
             }
 
             sw.Stop();
@@ -421,7 +538,10 @@ namespace Portlet.CheckInAdmin
             }
             catch (Exception ex)
             {
-                debug = String.Format("{0}<p>Encountered problem getting students from JICS:</p><p>{1}</p>", debug, this.FormatException("", ex));
+                //debug = String.Format("{0}<p>Encountered problem getting students from JICS:</p><p>{1}</p>", debug, this.FormatException("", ex));
+                debug = String.Format("{0}<p>Encountered problem getting students from JICS:</p><p>{1}</p>", debug,
+                    this.FormatException("", ex, null, null, null, LogEventType.Error, LogScreen.CheckInAdminHelper, sqlStudentsFromJICS)
+                );
             }
 
             //Initialize lists
@@ -467,7 +587,9 @@ namespace Portlet.CheckInAdmin
                 }
                 catch (Exception ex)
                 {
-                    debug = String.Format("{0}<p>Error executing disable: {1}<br />{2}</p>", debug, sqlSP, this.FormatException("", ex));
+                    //debug = String.Format("{0}<p>Error executing disable: {1}<br />{2}</p>", debug, sqlSP, this.FormatException("", ex));
+                    debug = String.Format("{0}<p>Error executing disable: {1}<br />{2}</p>", debug, sqlSP,
+                        this.FormatException("", ex, null, null, cxID, LogEventType.Error, LogScreen.CheckInAdminHelper, sqlSP));
                 }
             }
 
@@ -491,7 +613,9 @@ namespace Portlet.CheckInAdmin
                 }
                 catch (Exception ex)
                 {
-                    debug = String.Format("{0}<p>Error executing insert/update: {1}<br />{2}</p>", debug, sqlSP, this.FormatException("", ex));
+                    //debug = String.Format("{0}<p>Error executing insert/update: {1}<br />{2}</p>", debug, sqlSP, this.FormatException("", ex));
+                    debug = String.Format("{0}<p>Error executing insert/update: {1}<br />{2}</p>", debug, sqlSP,
+                        this.FormatException("", ex, null, null, cxID, LogEventType.Error, LogScreen.CheckInAdminHelper, sqlSP));
                 }
             }
             sw.Stop();
@@ -503,14 +627,16 @@ namespace Portlet.CheckInAdmin
             #region Initialize Student Progress
 
             sw.Start();
+            string sqlInitStudentProgress = "EXECUTE CUS_spCheckIn_InitializeStudentProgress";
             try
             {
-                jicsSpConn.ConnectToERP("EXECUTE CUS_spCheckIn_InitializeStudentProgress", ref exSP);
+                jicsSpConn.ConnectToERP(sqlInitStudentProgress, ref exSP);
                 if (exSP != null) { throw exSP; }
             }
             catch (Exception ex)
             {
                 debug = String.Format("{0}<p>Error when initializing student progress</p>", debug);
+                FormatException("Error when initializing student progress in GenerateStudentMetaData()", ex, null, null, null, LogEventType.Error, LogScreen.CheckInAdminHelper, sqlInitStudentProgress);
             }
             finally
             {
